@@ -16,13 +16,14 @@ Specification: [SPEC.md](SPEC.md). Status: M0 (foundations).
 ## Development
 
 ```sh
-# Python: validation and CLI
-cd api && uv sync
+# Python (uv workspace, run from the repository root)
+uv sync
 uv run pytest
-uv run capsa validate ../profiles/demo/demo-latin.yaml
-uv run capsa lint ../profiles/demo/demo-latin.yaml      # validation plus warnings
+uv run capsa validate profiles/demo/demo-latin.yaml
+uv run capsa lint profiles/demo/demo-latin.yaml         # validation plus warnings
 uv run capsa import-csv words.csv -o words.yaml \
     --id my-words --title "My words" --source-lang la --tr-lang de
+uv run ruff check api && uv run ruff format --check api
 
 # TypeScript: answer checking
 cd web && npm install
@@ -51,7 +52,7 @@ HTTPS is on `https://capsa.localhost:8443` (self-signed), the Traefik dashboard 
 ## Private profile
 
 `profiles/private/` is excluded via `.gitignore`. It holds `latein-lehrbuch.yaml`, which contains textbook content.
-Check it with `cd api && uv run capsa validate ../profiles/private/latein-lehrbuch.yaml`.
+Check it with `uv run capsa lint profiles/private/latein-lehrbuch.yaml`.
 Both test suites also run content-free property checks against any private profile that is present, and skip them otherwise.
 
 ## Licence

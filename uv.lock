@@ -2,6 +2,11 @@ version = 1
 revision = 5
 requires-python = ">=3.12"
 
+[manifest]
+members = [
+    "capsa",
+]
+
 [[package]]
 name = "annotated-doc"
 version = "0.0.7"
@@ -45,7 +50,7 @@ wheels = [
 [[package]]
 name = "capsa"
 version = "0.1.0"
-source = { editable = "." }
+source = { editable = "api" }
 dependencies = [
     { name = "fastapi" },
     { name = "jsonschema" },

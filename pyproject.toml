@@ -1,0 +1,4 @@
+# uv workspace root, so `uv run capsa ...` and `uv run pytest` work from the
+# repository root. The Python package itself lives in api/.
+[tool.uv.workspace]
+members = ["api"]
