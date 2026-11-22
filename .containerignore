@@ -1,0 +1,10 @@
+# Never send textbook content or local state into an image build.
+profiles/private/
+**/.venv/
+**/node_modules/
+**/__pycache__/
+**/.pytest_cache/
+**/.ruff_cache/
+**/*.sqlite*
+.git/
+.env
