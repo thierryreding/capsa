@@ -39,3 +39,19 @@ def parse_profile(text: str) -> Any:
 
 def load_profile(path: str | Path) -> Any:
     return parse_profile(Path(path).read_text(encoding="utf-8"))
+
+
+class _Dumper(yaml.SafeDumper):
+    """Writes lists of scalars in flow style (`tr: {de: [a, b]}`), like hand-written profiles."""
+
+
+def _represent_list(dumper: yaml.SafeDumper, data: list) -> yaml.Node:
+    flow = all(isinstance(x, str | int) for x in data)
+    return dumper.represent_sequence("tag:yaml.org,2002:seq", data, flow_style=flow)
+
+
+_Dumper.add_representer(list, _represent_list)
+
+
+def dump_profile(data: Any) -> str:
+    return yaml.dump(data, Dumper=_Dumper, allow_unicode=True, sort_keys=False, width=100)

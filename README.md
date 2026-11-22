@@ -20,12 +20,18 @@ Specification: [SPEC.md](SPEC.md). Status: M0 (foundations).
 cd api && uv sync
 uv run pytest
 uv run capsa validate ../profiles/demo/demo-latin.yaml
+uv run capsa lint ../profiles/demo/demo-latin.yaml      # validation plus warnings
+uv run capsa import-csv words.csv -o words.yaml \
+    --id my-words --title "My words" --source-lang la --tr-lang de
 
 # TypeScript: answer checking
 cd web && npm install
 npm test
 npm run check
 ```
+
+`import-csv` expects the columns `unit;lemma;info;translation` (header optional, UTF-8). Several
+meanings are separated by `,` or `;` outside parentheses; quote the field if it contains `;`.
 
 ## Private profile
 
