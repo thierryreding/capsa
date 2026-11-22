@@ -1,17 +1,17 @@
-"""The `capsa` command line tool."""
+"""The `capsa` command line tool (Click)."""
 
 from __future__ import annotations
 
-import argparse
 import csv
-import getpass
 import json
 import sys
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 
+import click
 import yaml
+from sqlalchemy import Connection
 
 from capsa import accounts, migrate
 from capsa.accounts import AccountError
@@ -26,16 +26,32 @@ from capsa.profile_io import dump_profile, load_profile
 from capsa.validate import Issue, summary, validate_profile
 
 
+def fail() -> None:
+    raise click.exceptions.Exit(1)
+
+
+def err(message: str) -> None:
+    click.echo(message, err=True)
+
+
+@click.group(context_settings={"help_option_names": ["-h", "--help"]})
+def cli() -> None:
+    """Capsa vocabulary trainer tools."""
+
+
+# --- profiles ---------------------------------------------------------------
+
+
 def _check_files(
     paths: Sequence[str], strict: bool, extra: Callable[[Any], list[Issue]] | None = None
-) -> int:
+) -> None:
     """Validate each profile (and run `extra` checks on valid ones); print a report."""
     failed = False
     for path in paths:
         try:
             data = load_profile(path)
         except (OSError, yaml.YAMLError) as exc:
-            print(f"{path}: cannot load: {exc}", file=sys.stderr)
+            err(f"{path}: cannot load: {exc}")
             failed = True
             continue
 
@@ -45,7 +61,7 @@ def _check_files(
             issues += extra(data)
         warnings = [i for i in issues if i.level == "warning"]
         for issue in issues:
-            print(f"{path}: {issue}")
+            click.echo(f"{path}: {issue}")
         if errors or (strict and warnings):
             failed = True
             status = "FAILED"
@@ -53,226 +69,273 @@ def _check_files(
             status = "ok"
         counts = summary(data) if not errors else {}
         detail = f"{len(counts)} units, {sum(counts.values())} entries, " if counts else ""
-        print(f"{path}: {status} ({detail}{len(errors)} errors, {len(warnings)} warnings)")
-    return 1 if failed else 0
+        click.echo(f"{path}: {status} ({detail}{len(errors)} errors, {len(warnings)} warnings)")
+    if failed:
+        fail()
 
 
-def cmd_validate(args: argparse.Namespace) -> int:
-    return _check_files(args.profiles, args.strict)
+profiles_argument = click.argument("profiles", nargs=-1, required=True, metavar="PROFILE...")
+strict_option = click.option("--strict", is_flag=True, help="Treat warnings as errors.")
 
 
-def cmd_lint(args: argparse.Namespace) -> int:
-    return _check_files(args.profiles, args.strict, extra=lint_profile)
+@cli.command()
+@profiles_argument
+@strict_option
+def validate(profiles: tuple[str, ...], strict: bool) -> None:
+    """Check profiles against the schema and reference rules."""
+    _check_files(profiles, strict)
 
 
-def cmd_import_csv(args: argparse.Namespace) -> int:
-    out = Path(args.output)
-    if args.output != "-" and out.exists() and not args.force:
-        print(f"{out}: exists, use --force to overwrite", file=sys.stderr)
-        return 1
+@cli.command()
+@profiles_argument
+@strict_option
+def lint(profiles: tuple[str, ...], strict: bool) -> None:
+    """Validate, then warn about likely mistakes."""
+    _check_files(profiles, strict, extra=lint_profile)
+
+
+@cli.command("import-csv")
+@click.argument("csv_path", metavar="CSV")
+@click.option("-o", "--output", required=True, help="Profile file to write, '-' for stdout.")
+@click.option("--id", "profile_id", required=True, help="Profile id, e.g. latin-own-words.")
+@click.option("--title", required=True)
+@click.option("--source-lang", required=True, help="Language of the lemmas, e.g. la.")
+@click.option("--tr-lang", required=True, help="Language of the translations, e.g. de.")
+@click.option("--delimiter", default=";", show_default=True, help="Column separator.")
+@click.option("--force", is_flag=True, help="Overwrite an existing output file.")
+def import_csv(
+    csv_path: str,
+    output: str,
+    profile_id: str,
+    title: str,
+    source_lang: str,
+    tr_lang: str,
+    delimiter: str,
+    force: bool,
+) -> None:
+    """Create a profile from a CSV file (unit;lemma;info;translation)."""
+    out = Path(output)
+    if output != "-" and out.exists() and not force:
+        err(f"{out}: exists, use --force to overwrite")
+        fail()
     try:
-        with open(args.csv, encoding="utf-8-sig", newline="") as f:
-            rows = list(csv.reader(f, delimiter=args.delimiter))
+        with open(csv_path, encoding="utf-8-sig", newline="") as f:
+            rows = list(csv.reader(f, delimiter=delimiter))
     except OSError as exc:
-        print(f"{args.csv}: cannot read: {exc}", file=sys.stderr)
-        return 1
+        err(f"{csv_path}: cannot read: {exc}")
+        fail()
 
     meta = ProfileMeta(
-        id=args.id, title=args.title, source_lang=args.source_lang, translation_lang=args.tr_lang
+        id=profile_id, title=title, source_lang=source_lang, translation_lang=tr_lang
     )
     try:
         data = rows_to_profile(rows, meta)
     except CsvImportError as exc:
         for problem in exc.problems:
-            print(f"{args.csv}: {problem}", file=sys.stderr)
-        return 1
+            err(f"{csv_path}: {problem}")
+        fail()
 
     errors = [i for i in validate_profile(data) if i.level == "error"]
     if errors:
         for issue in errors:
-            print(f"{args.csv}: {issue}", file=sys.stderr)
-        return 1
+            err(f"{csv_path}: {issue}")
+        fail()
 
     text = dump_profile(data)
-    if args.output == "-":
-        sys.stdout.write(text)
+    if output == "-":
+        click.echo(text, nl=False)
     else:
         out.write_text(text, encoding="utf-8")
         counts = summary(data)
-        print(f"{out}: wrote {len(counts)} units, {sum(counts.values())} entries")
-    return 0
+        click.echo(f"{out}: wrote {len(counts)} units, {sum(counts.values())} entries")
 
 
-def cmd_openapi(args: argparse.Namespace) -> int:
+@cli.command()
+@click.option("-o", "--output", default="-", help="File to write, '-' for stdout.")
+def openapi(output: str) -> None:
+    """Write the API description (OpenAPI JSON)."""
     text = json.dumps(create_app(Settings()).openapi(), indent=2, ensure_ascii=False) + "\n"
-    if args.output == "-":
-        sys.stdout.write(text)
+    if output == "-":
+        click.echo(text, nl=False)
     else:
-        Path(args.output).write_text(text, encoding="utf-8")
-    return 0
+        Path(output).write_text(text, encoding="utf-8")
 
 
-def cmd_db_upgrade(args: argparse.Namespace) -> int:
-    migrate.upgrade(args.database_url)
-    print("database is up to date")
-    return 0
+# --- database ---------------------------------------------------------------
+
+database_option = click.option(
+    "--database-url",
+    envvar="CAPSA_DATABASE_URL",
+    default=Settings().database_url,
+    show_default=True,
+    show_envvar=True,
+    help="SQLAlchemy URL of the database.",
+)
 
 
-def _add_database_option(p: argparse.ArgumentParser) -> None:
-    p.add_argument(
-        "--database-url",
-        default=Settings.from_env().database_url,
-        help="SQLAlchemy URL (default: $CAPSA_DATABASE_URL or sqlite:///capsa.sqlite)",
-    )
+@cli.group()
+def db() -> None:
+    """Database maintenance."""
 
 
-def _read_password(args: argparse.Namespace) -> str:
-    if args.password_stdin:
+@db.command()
+@database_option
+def upgrade(database_url: str) -> None:
+    """Apply all pending migrations."""
+    migrate.upgrade(database_url)
+    click.echo("database is up to date")
+
+
+# --- accounts ---------------------------------------------------------------
+
+
+def _transaction(database_url: str, fn: Callable[[Connection], str]) -> None:
+    """Run `fn` in one transaction; print its result, or the error and fail."""
+    engine = make_engine(database_url)
+    try:
+        with engine.begin() as conn:
+            click.echo(fn(conn))
+    except (AccountError, PasswordPolicyError) as exc:
+        err(f"error: {exc}")
+        fail()
+    finally:
+        engine.dispose()
+
+
+def _read_password(from_stdin: bool) -> str:
+    if from_stdin:
         return sys.stdin.readline().rstrip("\r\n")
-    first = getpass.getpass("New password: ")
-    if getpass.getpass("Repeat password: ") != first:
-        raise ValueError("passwords do not match")
-    return first
+    return click.prompt("New password", hide_input=True, confirmation_prompt="Repeat password")
 
 
-def _user_command(fn: Callable[[Any, argparse.Namespace], str]) -> Callable[..., int]:
-    """Run `fn(conn, args)` in a transaction; print its result or the error."""
-
-    def run(args: argparse.Namespace) -> int:
-        engine = make_engine(args.database_url)
-        try:
-            with engine.begin() as conn:
-                print(fn(conn, args))
-        except (AccountError, PasswordPolicyError, ValueError) as exc:
-            print(f"error: {exc}", file=sys.stderr)
-            return 1
-        finally:
-            engine.dispose()
-        return 0
-
-    return run
+password_stdin_option = click.option(
+    "--password-stdin", is_flag=True, help="Read the password from stdin."
+)
 
 
-def _user_add(conn: Any, args: argparse.Namespace) -> str:
-    role = "admin" if args.admin else "learner"
-    user = accounts.create_user(
-        conn, Passwords(), args.username, _read_password(args), role, now_ms()
-    )
-    return f"created {user.role} {user.username} ({user.id})"
+@cli.group()
+def user() -> None:
+    """Manage accounts."""
 
 
-def _user_passwd(conn: Any, args: argparse.Namespace) -> str:
-    user = accounts.require_user(conn, args.username)
-    accounts.set_password(conn, Passwords(), user.id, _read_password(args), now_ms())
-    return f"password changed for {user.username}"
+@user.command("add")
+@click.argument("username")
+@click.option("--admin", is_flag=True, help="Create an admin (parent) account.")
+@password_stdin_option
+@database_option
+def user_add(username: str, admin: bool, password_stdin: bool, database_url: str) -> None:
+    """Create an account (asks for the password)."""
+    password = _read_password(password_stdin)
+
+    def run(conn: Connection) -> str:
+        role = "admin" if admin else "learner"
+        u = accounts.create_user(conn, Passwords(), username, password, role, now_ms())
+        return f"created {u.role} {u.username} ({u.id})"
+
+    _transaction(database_url, run)
 
 
-def _user_list(conn: Any, args: argparse.Namespace) -> str:
-    lines = []
-    for user in accounts.list_users(conn):
-        granted = ", ".join(sorted(accounts.grants(conn, user.id))) or "-"
-        state = " (disabled)" if user.disabled else ""
-        lines.append(f"{user.username:<20} {user.role:<8} profiles: {granted}{state}")
-    return "\n".join(lines) or "no users"
+@user.command("passwd")
+@click.argument("username")
+@password_stdin_option
+@database_option
+def user_passwd(username: str, password_stdin: bool, database_url: str) -> None:
+    """Set a new password."""
+    password = _read_password(password_stdin)
+
+    def run(conn: Connection) -> str:
+        u = accounts.require_user(conn, username)
+        accounts.set_password(conn, Passwords(), u.id, password, now_ms())
+        return f"password changed for {u.username}"
+
+    _transaction(database_url, run)
 
 
-def _user_set_disabled(disabled: bool) -> Callable[[Any, argparse.Namespace], str]:
-    def run(conn: Any, args: argparse.Namespace) -> str:
+@user.command("list")
+@database_option
+def user_list(database_url: str) -> None:
+    """List accounts and their profiles."""
 
-        user = accounts.require_user(conn, args.username)
-        accounts.set_disabled(conn, user.id, disabled, now_ms())
-        return f"{'disabled' if disabled else 'enabled'} {user.username}"
+    def run(conn: Connection) -> str:
+        lines = []
+        for u in accounts.list_users(conn):
+            granted = ", ".join(sorted(accounts.grants(conn, u.id))) or "-"
+            state = " (disabled)" if u.disabled else ""
+            lines.append(f"{u.username:<20} {u.role:<8} profiles: {granted}{state}")
+        return "\n".join(lines) or "no users"
 
-    return run
-
-
-def _user_grants(add: bool) -> Callable[[Any, argparse.Namespace], str]:
-    def run(conn: Any, args: argparse.Namespace) -> str:
-
-        user = accounts.require_user(conn, args.username)
-        current = accounts.grants(conn, user.id)
-        wanted = current | set(args.profiles) if add else current - set(args.profiles)
-        accounts.set_grants(conn, user.id, wanted, now_ms())
-        return f"{user.username}: {', '.join(sorted(wanted)) or 'no profiles'}"
-
-    return run
+    _transaction(database_url, run)
 
 
-def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="capsa", description="Capsa vocabulary trainer tools")
-    sub = parser.add_subparsers(dest="command", required=True)
+def _set_disabled(username: str, disabled: bool, database_url: str) -> None:
+    def run(conn: Connection) -> str:
+        u = accounts.require_user(conn, username)
+        accounts.set_disabled(conn, u.id, disabled, now_ms())
+        return f"{'disabled' if disabled else 'enabled'} {u.username}"
 
-    p = sub.add_parser("validate", help="check profiles against the schema and reference rules")
-    p.add_argument("profiles", nargs="+", metavar="PROFILE")
-    p.add_argument("--strict", action="store_true", help="treat warnings as errors")
-    p.set_defaults(func=cmd_validate)
+    _transaction(database_url, run)
 
-    p = sub.add_parser("lint", help="validate, then warn about likely mistakes")
-    p.add_argument("profiles", nargs="+", metavar="PROFILE")
-    p.add_argument("--strict", action="store_true", help="treat warnings as errors")
-    p.set_defaults(func=cmd_lint)
 
-    p = sub.add_parser(
-        "import-csv", help="create a profile from a CSV file (unit;lemma;info;translation)"
-    )
-    p.add_argument("csv", metavar="CSV")
-    p.add_argument("-o", "--output", required=True, help="profile file to write, '-' for stdout")
-    p.add_argument("--id", required=True, help="profile id, e.g. latin-own-words")
-    p.add_argument("--title", required=True)
-    p.add_argument("--source-lang", required=True, help="language of the lemmas, e.g. la")
-    p.add_argument("--tr-lang", required=True, help="language of the translations, e.g. de")
-    p.add_argument("--delimiter", default=";", help="column separator (default ';')")
-    p.add_argument("--force", action="store_true", help="overwrite an existing output file")
-    p.set_defaults(func=cmd_import_csv)
+@user.command("disable")
+@click.argument("username")
+@database_option
+def user_disable(username: str, database_url: str) -> None:
+    """Disable an account and sign it out."""
+    _set_disabled(username, True, database_url)
 
-    p = sub.add_parser("openapi", help="write the API description (OpenAPI JSON)")
-    p.add_argument("-o", "--output", default="-", help="file to write, '-' for stdout")
-    p.set_defaults(func=cmd_openapi)
 
-    db = sub.add_parser("db", help="database maintenance").add_subparsers(
-        dest="db_command", required=True
-    )
-    p = db.add_parser("upgrade", help="apply all pending migrations")
-    _add_database_option(p)
-    p.set_defaults(func=cmd_db_upgrade)
+@user.command("enable")
+@click.argument("username")
+@database_option
+def user_enable(username: str, database_url: str) -> None:
+    """Enable a disabled account."""
+    _set_disabled(username, False, database_url)
 
-    user = sub.add_parser("user", help="manage accounts").add_subparsers(
-        dest="user_command", required=True
-    )
-    p = user.add_parser("add", help="create an account (asks for the password)")
-    p.add_argument("username")
-    p.add_argument("--admin", action="store_true", help="create an admin (parent) account")
-    p.add_argument("--password-stdin", action="store_true", help="read the password from stdin")
-    p.set_defaults(func=_user_command(_user_add))
 
-    p = user.add_parser("passwd", help="set a new password")
-    p.add_argument("username")
-    p.add_argument("--password-stdin", action="store_true", help="read the password from stdin")
-    p.set_defaults(func=_user_command(_user_passwd))
+def _change_grants(username: str, profiles: tuple[str, ...], add: bool, database_url: str) -> None:
+    def run(conn: Connection) -> str:
+        u = accounts.require_user(conn, username)
+        current = accounts.grants(conn, u.id)
+        wanted = current | set(profiles) if add else current - set(profiles)
+        accounts.set_grants(conn, u.id, wanted, now_ms())
+        return f"{u.username}: {', '.join(sorted(wanted)) or 'no profiles'}"
 
-    p = user.add_parser("list", help="list accounts and their profiles")
-    p.set_defaults(func=_user_command(_user_list))
+    _transaction(database_url, run)
 
-    for name, disabled in (("disable", True), ("enable", False)):
-        p = user.add_parser(name, help=f"{name} an account")
-        p.add_argument("username")
-        p.set_defaults(func=_user_command(_user_set_disabled(disabled)))
 
-    for name, add in (("grant", True), ("revoke", False)):
-        verb = "release profiles to" if add else "withdraw profiles from"
-        p = user.add_parser(name, help=f"{verb} an account")
-        p.add_argument("username")
-        p.add_argument("profiles", nargs="+", metavar="PROFILE_ID")
-        p.set_defaults(func=_user_command(_user_grants(add)))
+profile_ids_argument = click.argument("profiles", nargs=-1, required=True, metavar="PROFILE_ID...")
 
-    for p in user.choices.values():
-        _add_database_option(p)
-    return parser
+
+@user.command("grant")
+@click.argument("username")
+@profile_ids_argument
+@database_option
+def user_grant(username: str, profiles: tuple[str, ...], database_url: str) -> None:
+    """Release profiles to an account."""
+    _change_grants(username, profiles, True, database_url)
+
+
+@user.command("revoke")
+@click.argument("username")
+@profile_ids_argument
+@database_option
+def user_revoke(username: str, profiles: tuple[str, ...], database_url: str) -> None:
+    """Withdraw profiles from an account."""
+    _change_grants(username, profiles, False, database_url)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
-    return args.func(args)
+    """Run the CLI and return the exit status (also used by tests)."""
+    try:
+        # Without standalone mode, Click returns the code of click.exceptions.Exit.
+        result = cli.main(args=argv, prog_name="capsa", standalone_mode=False)
+    except click.ClickException as exc:
+        exc.show()
+        return exc.exit_code
+    except click.Abort:
+        err("Aborted!")
+        return 1
+    return result if isinstance(result, int) else 0
 
 
 if __name__ == "__main__":

@@ -3,10 +3,11 @@ from __future__ import annotations
 import io
 
 import pytest
+from click.testing import CliRunner
 
 from capsa import accounts
 from capsa.accounts import AccountError
-from capsa.cli import main
+from capsa.cli import cli, main
 from capsa.db import make_engine
 from capsa.migrate import upgrade
 from capsa.passwords import PasswordPolicyError, Passwords, check_policy
@@ -140,8 +141,15 @@ def test_cli_passwd_and_errors(db_url, monkeypatch, capsys):
     assert "taken" in capsys.readouterr().err
 
 
-def test_cli_interactive_password_mismatch(db_url, monkeypatch, capsys):
-    answers = iter(["geheim123", "geheim124"])
-    monkeypatch.setattr("getpass.getpass", lambda prompt: next(answers))
-    assert run(db_url, "add", "lena") == 1
-    assert "do not match" in capsys.readouterr().err
+def test_cli_interactive_password_prompt(db_url):
+    """The password is asked twice, hidden; a mismatch asks again."""
+    runner = CliRunner()
+    result = runner.invoke(
+        cli,
+        ["user", "add", "lena", "--database-url", db_url],
+        input="geheim123\ngeheim124\ngeheim123\ngeheim123\n",
+    )
+    assert result.exit_code == 0, result.output
+    assert "do not match" in result.output
+    assert "geheim" not in result.output  # hidden input
+    assert "created learner lena" in result.output

@@ -128,6 +128,7 @@ source = { editable = "api" }
 dependencies = [
     { name = "alembic" },
     { name = "argon2-cffi" },
+    { name = "click" },
     { name = "fastapi" },
     { name = "jsonschema" },
     { name = "pyyaml" },
@@ -146,6 +147,7 @@ dev = [
 requires-dist = [
     { name = "alembic", specifier = ">=1.14" },
     { name = "argon2-cffi", specifier = ">=23.1" },
+    { name = "click", specifier = ">=8.1" },
     { name = "fastapi", specifier = ">=0.115" },
     { name = "jsonschema", specifier = ">=4.23" },
     { name = "pyyaml", specifier = ">=6.0" },
