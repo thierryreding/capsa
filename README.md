@@ -33,6 +33,21 @@ npm run check
 `import-csv` expects the columns `unit;lemma;info;translation` (header optional, UTF-8). Several
 meanings are separated by `,` or `;` outside parentheses; quote the field if it contains `;`.
 
+## Local test pod
+
+`deploy/local/` runs the API behind Traefik in a podman pod, for testing the proxy setup locally:
+
+```sh
+deploy/local/pod.sh up        # build the API image, start the pod, wait until healthy
+curl http://capsa.localhost:8080/api/v1/health
+deploy/local/pod.sh logs      # follow all container logs
+deploy/local/pod.sh down
+```
+
+HTTPS is on `https://capsa.localhost:8443` (self-signed), the Traefik dashboard on
+`http://localhost:8081/dashboard/`. Image builds use the repository root as context;
+`.containerignore` keeps `profiles/private/` out of every image.
+
 ## Private profile
 
 `profiles/private/` is excluded via `.gitignore`. It holds `latein-lehrbuch.yaml`, which contains textbook content.

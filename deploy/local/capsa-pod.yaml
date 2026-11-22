@@ -1,0 +1,84 @@
+# Local test environment: one podman pod with Traefik in front of the Capsa API.
+# Start/stop with deploy/local/pod.sh (see README). Not used in production.
+#
+#   http://capsa.localhost:8080/api/v1/health    plain HTTP (browsers treat *.localhost as secure)
+#   https://capsa.localhost:8443/api/v1/health   TLS with Traefik's self-signed default certificate
+#   http://localhost:8081/dashboard/             Traefik dashboard
+#
+# Containers in a pod share one network namespace: Traefik reaches the API on
+# 127.0.0.1:8000, and only Traefik's ports are published on the host.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: capsa-traefik-dynamic
+data:
+  dynamic.yaml: |
+    http:
+      routers:
+        capsa-api:
+          rule: "(Host(`capsa.localhost`) || Host(`localhost`)) && PathPrefix(`/api`)"
+          entryPoints: [web]
+          service: capsa-api
+        capsa-api-tls:
+          rule: "(Host(`capsa.localhost`) || Host(`localhost`)) && PathPrefix(`/api`)"
+          entryPoints: [websecure]
+          service: capsa-api
+          tls: {}
+      services:
+        capsa-api:
+          loadBalancer:
+            healthCheck:
+              path: /api/v1/health
+              interval: 10s
+            servers:
+              - url: "http://127.0.0.1:8000"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: capsa
+  labels:
+    app: capsa
+spec:
+  restartPolicy: Always
+  containers:
+    - name: api
+      image: localhost/capsa-api:dev
+      env:
+        - name: CAPSA_ENV
+          value: local
+      livenessProbe:
+        httpGet:
+          path: /api/v1/health
+          port: 8000
+        initialDelaySeconds: 3
+        periodSeconds: 30
+
+    - name: traefik
+      image: docker.io/library/traefik:v3
+      args:
+        - --entrypoints.web.address=:8080
+        - --entrypoints.websecure.address=:8443
+        - --entrypoints.traefik.address=:8081
+        - --api.dashboard=true
+        - --api.insecure=true
+        - --providers.file.directory=/etc/traefik/dynamic
+        - --providers.file.watch=true
+        - --accesslog=true
+        - --log.level=INFO
+      ports:
+        - containerPort: 8080
+          hostPort: 8080
+        - containerPort: 8443
+          hostPort: 8443
+        - containerPort: 8081
+          hostPort: 8081
+      volumeMounts:
+        - name: traefik-dynamic
+          mountPath: /etc/traefik/dynamic
+          readOnly: true
+
+  volumes:
+    - name: traefik-dynamic
+      configMap:
+        name: capsa-traefik-dynamic
