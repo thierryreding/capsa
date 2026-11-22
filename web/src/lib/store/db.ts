@@ -31,6 +31,8 @@ export interface LocalEvent extends AnswerEvent {
   server_seq: number | null;
   /** 0 = not yet uploaded, 1 = on the server (numbers, so Dexie can index it). */
   synced: 0 | 1;
+  /** Why the server refused the event, if it did; such events are not retried. */
+  rejected: string | null;
 }
 
 interface MetaRow {
@@ -123,6 +125,7 @@ export async function recordAnswer(
     received_at: null,
     server_seq: null,
     synced: 0,
+    rejected: null,
   };
   await db.events.add(event);
   return event;
