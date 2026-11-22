@@ -1,12 +1,15 @@
-# Local test environment: one podman pod with Traefik in front of the Capsa API.
+# Local test environment: one podman pod with Traefik in front of the Capsa web app and API.
 # Start/stop with deploy/local/pod.sh (see README). Not used in production.
 #
-#   http://capsa.localhost:8080/api/v1/health    plain HTTP (browsers treat *.localhost as secure)
+#   http://capsa.localhost:8080/                 the app (browsers treat *.localhost as secure)
+#   http://capsa.localhost:8080/api/v1/health    the API
 #   https://capsa.localhost:8443/api/v1/health   TLS with Traefik's self-signed default certificate
 #   http://localhost:8081/dashboard/             Traefik dashboard
 #
 # Containers in a pod share one network namespace: Traefik reaches the API on
-# 127.0.0.1:8000, and only Traefik's ports are published on the host.
+# 127.0.0.1:8000 and the web app on 127.0.0.1:8090; only Traefik's ports are
+# published on the host. /api goes to the API (longer rule, higher priority),
+# everything else to the web app.
 #
 # @REPO@ is replaced by pod.sh with the repository path: the profiles folder
 # (including profiles/private) is mounted read-only and never baked into an image.
@@ -38,7 +41,20 @@ data:
           entryPoints: [websecure]
           service: capsa-api
           tls: {}
+        capsa-web:
+          rule: "Host(`capsa.localhost`) || Host(`localhost`)"
+          entryPoints: [web]
+          service: capsa-web
+        capsa-web-tls:
+          rule: "Host(`capsa.localhost`) || Host(`localhost`)"
+          entryPoints: [websecure]
+          service: capsa-web
+          tls: {}
       services:
+        capsa-web:
+          loadBalancer:
+            servers:
+              - url: "http://127.0.0.1:8090"
         capsa-api:
           loadBalancer:
             healthCheck:
@@ -73,6 +89,9 @@ spec:
           port: 8000
         initialDelaySeconds: 3
         periodSeconds: 30
+
+    - name: web
+      image: localhost/capsa-web:dev
 
     - name: traefik
       image: docker.io/library/traefik:v3

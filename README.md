@@ -46,7 +46,7 @@ meanings are separated by `,` or `;` outside parentheses; quote the field if it 
 
 ## Local test pod
 
-`deploy/local/` runs the API behind Traefik in a podman pod, for testing the proxy setup locally:
+`deploy/local/` runs the web app and the API behind Traefik in a podman pod, for testing locally:
 
 ```sh
 deploy/local/pod.sh up        # build the API image, start the pod, wait until healthy
@@ -64,7 +64,9 @@ deploy/local/pod.sh capsa user grant lena demo-latin
 deploy/local/pod.sh capsa user list
 ```
 
-The API docs are at `http://capsa.localhost:8080/api/v1/docs`. The pod mounts `profiles/`
+The app is at `http://capsa.localhost:8080/`, the API docs at `http://capsa.localhost:8080/api/v1/docs`.
+For frontend work, `cd web && npm run dev` serves the app with hot reload on `http://localhost:5173`
+and forwards `/api` to the pod. The pod mounts `profiles/`
 read-only (including `profiles/private/`) and keeps the database in the volume `capsa-data`;
 `deploy/local/pod.sh reset` removes both pod and volume.
 

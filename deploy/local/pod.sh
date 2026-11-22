@@ -1,6 +1,6 @@
 #!/bin/sh
-# Manage the local Capsa test pod (Traefik + API) with podman.
-#   deploy/local/pod.sh up      build the API image and (re)start the pod
+# Manage the local Capsa test pod (Traefik + web app + API) with podman.
+#   deploy/local/pod.sh up      build the images and (re)start the pod
 #   deploy/local/pod.sh down    stop and remove the pod
 #   deploy/local/pod.sh logs    follow the logs of all containers
 #   deploy/local/pod.sh status  show the pod and a health check through Traefik
@@ -13,6 +13,7 @@ here=$(cd "$(dirname "$0")" && pwd)
 repo=$(cd "$here/../.." && pwd)
 spec="$here/capsa-pod.yaml"
 image=localhost/capsa-api:dev
+web_image=localhost/capsa-web:dev
 
 spec_rendered() {
   sed "s|@REPO@|$repo|g" "$spec"
@@ -21,6 +22,7 @@ spec_rendered() {
 case "${1:-}" in
   up)
     podman build -f "$repo/api/Containerfile" -t "$image" "$repo"
+    podman build -f "$repo/web/Containerfile" -t "$web_image" "$repo/web"
     spec_rendered | podman kube play --replace -
     echo "Waiting for http://capsa.localhost:8080/api/v1/health ..."
     for _ in $(seq 1 30); do
