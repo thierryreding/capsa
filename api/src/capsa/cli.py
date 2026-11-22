@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import getpass
 import sys
 from collections.abc import Callable, Sequence
 from pathlib import Path
@@ -11,9 +12,14 @@ from typing import Any
 
 import yaml
 
+from capsa import accounts, migrate
+from capsa.accounts import AccountError
+from capsa.clock import now_ms
 from capsa.config import Settings
 from capsa.csv_import import CsvImportError, ProfileMeta, rows_to_profile
+from capsa.db import make_engine
 from capsa.lint import lint_profile
+from capsa.passwords import PasswordPolicyError, Passwords
 from capsa.profile_io import dump_profile, load_profile
 from capsa.validate import Issue, summary, validate_profile
 
@@ -96,9 +102,7 @@ def cmd_import_csv(args: argparse.Namespace) -> int:
 
 
 def cmd_db_upgrade(args: argparse.Namespace) -> int:
-    from capsa.migrate import upgrade
-
-    upgrade(args.database_url)
+    migrate.upgrade(args.database_url)
     print("database is up to date")
     return 0
 
@@ -109,6 +113,78 @@ def _add_database_option(p: argparse.ArgumentParser) -> None:
         default=Settings.from_env().database_url,
         help="SQLAlchemy URL (default: $CAPSA_DATABASE_URL or sqlite:///capsa.sqlite)",
     )
+
+
+def _read_password(args: argparse.Namespace) -> str:
+    if args.password_stdin:
+        return sys.stdin.readline().rstrip("\r\n")
+    first = getpass.getpass("New password: ")
+    if getpass.getpass("Repeat password: ") != first:
+        raise ValueError("passwords do not match")
+    return first
+
+
+def _user_command(fn: Callable[[Any, argparse.Namespace], str]) -> Callable[..., int]:
+    """Run `fn(conn, args)` in a transaction; print its result or the error."""
+
+    def run(args: argparse.Namespace) -> int:
+        engine = make_engine(args.database_url)
+        try:
+            with engine.begin() as conn:
+                print(fn(conn, args))
+        except (AccountError, PasswordPolicyError, ValueError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        finally:
+            engine.dispose()
+        return 0
+
+    return run
+
+
+def _user_add(conn: Any, args: argparse.Namespace) -> str:
+    role = "admin" if args.admin else "learner"
+    user = accounts.create_user(
+        conn, Passwords(), args.username, _read_password(args), role, now_ms()
+    )
+    return f"created {user.role} {user.username} ({user.id})"
+
+
+def _user_passwd(conn: Any, args: argparse.Namespace) -> str:
+    user = accounts.require_user(conn, args.username)
+    accounts.set_password(conn, Passwords(), user.id, _read_password(args), now_ms())
+    return f"password changed for {user.username}"
+
+
+def _user_list(conn: Any, args: argparse.Namespace) -> str:
+    lines = []
+    for user in accounts.list_users(conn):
+        granted = ", ".join(sorted(accounts.grants(conn, user.id))) or "-"
+        state = " (disabled)" if user.disabled else ""
+        lines.append(f"{user.username:<20} {user.role:<8} profiles: {granted}{state}")
+    return "\n".join(lines) or "no users"
+
+
+def _user_set_disabled(disabled: bool) -> Callable[[Any, argparse.Namespace], str]:
+    def run(conn: Any, args: argparse.Namespace) -> str:
+
+        user = accounts.require_user(conn, args.username)
+        accounts.set_disabled(conn, user.id, disabled, now_ms())
+        return f"{'disabled' if disabled else 'enabled'} {user.username}"
+
+    return run
+
+
+def _user_grants(add: bool) -> Callable[[Any, argparse.Namespace], str]:
+    def run(conn: Any, args: argparse.Namespace) -> str:
+
+        user = accounts.require_user(conn, args.username)
+        current = accounts.grants(conn, user.id)
+        wanted = current | set(args.profiles) if add else current - set(args.profiles)
+        accounts.set_grants(conn, user.id, wanted, now_ms())
+        return f"{user.username}: {', '.join(sorted(wanted)) or 'no profiles'}"
+
+    return run
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -144,6 +220,38 @@ def build_parser() -> argparse.ArgumentParser:
     p = db.add_parser("upgrade", help="apply all pending migrations")
     _add_database_option(p)
     p.set_defaults(func=cmd_db_upgrade)
+
+    user = sub.add_parser("user", help="manage accounts").add_subparsers(
+        dest="user_command", required=True
+    )
+    p = user.add_parser("add", help="create an account (asks for the password)")
+    p.add_argument("username")
+    p.add_argument("--admin", action="store_true", help="create an admin (parent) account")
+    p.add_argument("--password-stdin", action="store_true", help="read the password from stdin")
+    p.set_defaults(func=_user_command(_user_add))
+
+    p = user.add_parser("passwd", help="set a new password")
+    p.add_argument("username")
+    p.add_argument("--password-stdin", action="store_true", help="read the password from stdin")
+    p.set_defaults(func=_user_command(_user_passwd))
+
+    p = user.add_parser("list", help="list accounts and their profiles")
+    p.set_defaults(func=_user_command(_user_list))
+
+    for name, disabled in (("disable", True), ("enable", False)):
+        p = user.add_parser(name, help=f"{name} an account")
+        p.add_argument("username")
+        p.set_defaults(func=_user_command(_user_set_disabled(disabled)))
+
+    for name, add in (("grant", True), ("revoke", False)):
+        verb = "release profiles to" if add else "withdraw profiles from"
+        p = user.add_parser(name, help=f"{verb} an account")
+        p.add_argument("username")
+        p.add_argument("profiles", nargs="+", metavar="PROFILE_ID")
+        p.set_defaults(func=_user_command(_user_grants(add)))
+
+    for p in user.choices.values():
+        _add_database_option(p)
     return parser
 
 
