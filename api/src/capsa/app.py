@@ -21,6 +21,7 @@ from capsa.passwords import Passwords
 from capsa.profiles import ProfileStore
 from capsa.ratelimit import LoginLimiter
 from capsa.routes import auth, profiles, sync
+from capsa.routes import settings as settings_routes
 
 API_PREFIX = "/api/v1"
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
@@ -76,5 +77,6 @@ def create_app(
     router.include_router(auth.router)
     router.include_router(profiles.router)
     router.include_router(sync.router)
+    router.include_router(settings_routes.router)
     app.include_router(router)
     return app
