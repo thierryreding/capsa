@@ -14,6 +14,7 @@ from capsa.accounts import User
 from capsa.clock import Clock
 from capsa.config import Settings
 from capsa.passwords import Passwords
+from capsa.profiles import ProfileStore
 from capsa.ratelimit import LoginLimiter
 
 SESSION_COOKIE = "capsa_session"
@@ -27,6 +28,7 @@ class AppState:
     passwords: Passwords
     clock: Clock
     limiter: LoginLimiter
+    profiles: ProfileStore
 
 
 def get_state(request: Request) -> AppState:

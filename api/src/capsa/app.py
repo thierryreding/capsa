@@ -18,8 +18,9 @@ from capsa.config import Settings
 from capsa.db import make_engine
 from capsa.deps import CSRF_HEADER, AppState
 from capsa.passwords import Passwords
+from capsa.profiles import ProfileStore
 from capsa.ratelimit import LoginLimiter
-from capsa.routes import auth
+from capsa.routes import auth, profiles
 
 API_PREFIX = "/api/v1"
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
@@ -51,6 +52,7 @@ def create_app(
         passwords=passwords or Passwords(),
         clock=clock,
         limiter=LoginLimiter(settings.login_max_failures, settings.login_window_seconds * 1000),
+        profiles=ProfileStore(settings.profile_dir),
     )
 
     @app.middleware("http")
@@ -72,5 +74,6 @@ def create_app(
         return Health(status="ok", version=app.version)
 
     router.include_router(auth.router)
+    router.include_router(profiles.router)
     app.include_router(router)
     return app
