@@ -2,7 +2,7 @@
 
 Capsa is the project name (Latin for a container for scrolls, fitting for a Leitner box). CLI name: `capsa`, repository: `capsa`.
 
-Status: M0 and M1 done, M2 next. This document is meant as the working basis for Claude Code.
+Status: M0, M1 and M2 done, M3 (sync) next. This document is meant as the working basis for Claude Code.
 Attached: `profiles/private/latein-lehrbuch.yaml` (first profile: Latin, "Salve" + units 1-4, 139 entries).
 
 ## 1. Goal
@@ -121,8 +121,9 @@ Goal: no merge conflicts, full offline functionality.
 **Leitner with 5 boxes.** Correct: one box up. Wrong: back to box 1.
 Initial intervals: box 1 = same session, 2 = 1 day, 3 = 3 days, 4 = 7 days, 5 = 21 days. The values are configurable.
 State is kept separately per user, entry and direction.
+Decided details: a card never answered is "new" and starts in box 1. Intervals count local calendar days, not 24-hour periods (an evening answer is due the next morning). Test vectors: `vectors/leitner.json`.
 
-**Session:** default 10 cards, mixes due entries and mistakes.
+**Session:** default 10 cards, mixes due entries and mistakes. Decided details: the default selection takes mistakes first, then due cards (lower box and older first), then new cards, and shuffles them; "due only", "mistakes only" and "all" are alternatives. A wrong card comes back three cards later in the same session, at most twice. Each direction is a separate card. Locally, every account has its own IndexedDB database, so several children can share a device.
 **Test date:** if a date is set, the selected units are distributed so that every entry has been answered correctly at least twice by then (simple heuristic, refine later).
 
 **Answer checking (typed answers)**
