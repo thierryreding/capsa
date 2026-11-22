@@ -5,8 +5,10 @@ description = "Capsa vocabulary trainer: API server and profile tooling"
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.12"
 dependencies = [
+    "fastapi>=0.115",
     "jsonschema>=4.23",
     "pyyaml>=6.0",
+    "uvicorn>=0.32",
 ]
 
 [project.scripts]
@@ -14,6 +16,7 @@ capsa = "capsa.cli:main"
 
 [dependency-groups]
 dev = [
+    "httpx2>=2.16.2",
     "pytest>=8",
     "ruff>=0.8",
 ]
