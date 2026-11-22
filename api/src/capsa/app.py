@@ -20,7 +20,7 @@ from capsa.deps import CSRF_HEADER, AppState
 from capsa.passwords import Passwords
 from capsa.profiles import ProfileStore
 from capsa.ratelimit import LoginLimiter
-from capsa.routes import auth, profiles
+from capsa.routes import auth, profiles, sync
 
 API_PREFIX = "/api/v1"
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
@@ -75,5 +75,6 @@ def create_app(
 
     router.include_router(auth.router)
     router.include_router(profiles.router)
+    router.include_router(sync.router)
     app.include_router(router)
     return app
