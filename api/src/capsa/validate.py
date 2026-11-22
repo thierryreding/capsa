@@ -23,9 +23,11 @@ class Issue:
     level: Level
     path: str
     message: str
+    code: str = ""
 
     def __str__(self) -> str:
-        return f"{self.level}: {self.path or '<root>'}: {self.message}"
+        code = f" [{self.code}]" if self.code else ""
+        return f"{self.level}: {self.path or '<root>'}: {self.message}{code}"
 
 
 @cache

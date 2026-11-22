@@ -4,17 +4,22 @@ from __future__ import annotations
 
 import argparse
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from typing import Any
 
 import yaml
 
+from capsa.lint import lint_profile
 from capsa.profile_io import load_profile
-from capsa.validate import summary, validate_profile
+from capsa.validate import Issue, summary, validate_profile
 
 
-def cmd_validate(args: argparse.Namespace) -> int:
+def _check_files(
+    paths: Sequence[str], strict: bool, extra: Callable[[Any], list[Issue]] | None = None
+) -> int:
+    """Validate each profile (and run `extra` checks on valid ones); print a report."""
     failed = False
-    for path in args.profiles:
+    for path in paths:
         try:
             data = load_profile(path)
         except (OSError, yaml.YAMLError) as exc:
@@ -24,19 +29,28 @@ def cmd_validate(args: argparse.Namespace) -> int:
 
         issues = validate_profile(data)
         errors = [i for i in issues if i.level == "error"]
+        if not errors and extra is not None:
+            issues += extra(data)
         warnings = [i for i in issues if i.level == "warning"]
         for issue in issues:
             print(f"{path}: {issue}")
-        if errors or (args.strict and warnings):
+        if errors or (strict and warnings):
             failed = True
             status = "FAILED"
         else:
             status = "ok"
         counts = summary(data) if not errors else {}
-        total = sum(counts.values())
-        detail = f"{len(counts)} units, {total} entries, " if counts else ""
+        detail = f"{len(counts)} units, {sum(counts.values())} entries, " if counts else ""
         print(f"{path}: {status} ({detail}{len(errors)} errors, {len(warnings)} warnings)")
     return 1 if failed else 0
+
+
+def cmd_validate(args: argparse.Namespace) -> int:
+    return _check_files(args.profiles, args.strict)
+
+
+def cmd_lint(args: argparse.Namespace) -> int:
+    return _check_files(args.profiles, args.strict, extra=lint_profile)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -47,6 +61,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("profiles", nargs="+", metavar="PROFILE")
     p.add_argument("--strict", action="store_true", help="treat warnings as errors")
     p.set_defaults(func=cmd_validate)
+
+    p = sub.add_parser("lint", help="validate, then warn about likely mistakes")
+    p.add_argument("profiles", nargs="+", metavar="PROFILE")
+    p.add_argument("--strict", action="store_true", help="treat warnings as errors")
+    p.set_defaults(func=cmd_lint)
     return parser
 
 
