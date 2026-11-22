@@ -2,7 +2,7 @@
 
 Capsa is the project name (Latin for a container for scrolls, fitting for a Leitner box). CLI name: `capsa`, repository: `capsa`.
 
-Status: planning, no code yet. This document is meant as the working basis for Claude Code.
+Status: M0 in progress. This document is meant as the working basis for Claude Code.
 Attached: `profiles/private/latein-lehrbuch.yaml` (first profile: Latin, "Salve" + units 1-4, 139 entries).
 
 ## 1. Goal
@@ -42,7 +42,7 @@ Languages and textbooks are modelled as interchangeable **profiles**; nothing is
 ```
  Browser/PWA (TypeScript)                  Home server
 ┌───────────────────────────┐        ┌─────────────────────────┐
-│ UI + quiz logic           │        │ Reverse proxy (HTTPS)   │
+│ UI + quiz logic           │        │ Traefik (HTTPS)         │
 │ Service worker (cache)    │◄─────► │ API (Python/FastAPI)    │
 │ IndexedDB:                │  HTTPS │ SQLite (accounts,events)│
 │  - profiles (copy)        │        │ Profiles as YAML files  │
@@ -64,7 +64,7 @@ The reference is the file `profiles/private/latein-lehrbuch.yaml`. A JSON Schema
 Profile
   id, title, source_lang, required_translation_lang, translation_langs[], note_langs[],
   revision (int, increase on every change), book{title,publisher,isbn,pages},
-  rights{content, distribution}, matching{ignore_diacritics, strip_prefixes{lang:[..]}, optional_articles{lang:[..]}}
+  rights{content, distribution}, matching{ignore_diacritics, strip_prefixes{lang:[..]}, optional_articles{lang:[..]}, optional_words{lang:[..]}}
 Unit            id, number, title, book_ref, review[entry-id], notes[], tables[], entries[]
 Entry           id (stable!), lemma, info, tr{lang:[meaning..]}, loanwords{lang:[..]},
                 examples[{la,de,..}], notes[], refs[], pos?, gender?
@@ -121,11 +121,13 @@ State is kept separately per user, entry and direction.
 
 **Answer checking (typed answers)**
 1. Normalise: Unicode NFD, strip combining marks (macron, breve) if `ignore_diacritics`, `casefold`, trim, collapse repeated whitespace.
-2. Accepted answers come from the entries in `tr[lang]`. Parenthetical additions are optional ("da (zeitlich)" also accepts "da").
-3. Prefixes from `strip_prefixes` are optional ("erwartet" instead of "er/sie/es erwartet"). Articles from `optional_articles` are optional.
+2. Accepted answers come from the entries in `tr[lang]`. Parenthetical additions are optional ("da (zeitlich)" also accepts "da", "sieh(e)" accepts "sieh" and "siehe"). Ellipses and sentence punctuation at either end are ignored.
+3. Prefixes from `strip_prefixes` are optional ("erwartet" instead of "er/sie/es erwartet"). Articles from `optional_articles` are optional. Both are written without a trailing space and match only at a word boundary ("die" never strips "dieser"; a prefix ending in an apostrophe such as French "l'" needs no space). Words from `optional_words` (placeholders such as "etw.", "jdn.") may be left out anywhere.
+3a. Slash alternatives within a word: each part or the whole is accepted ("ich/mich" accepts "ich", "mich", "ich/mich"; "er/sie/es ist" also accepts "sie ist"). Same for the lemma ("ego/mē").
+3b. Several meanings typed with "," or ";" must all be acceptable; the weakest verdict counts.
 4. One correct meaning is enough (default). An "name all meanings" switch can follow later.
 5. Almost correct (Levenshtein distance 1, only for words of 6 characters or more) is flagged as "almost"; the user decides.
-6. Direction translation→Latin: macrons are optional, the form in `lemma` is compared. For verbs the form in `info` is accepted as well.
+6. Direction translation→Latin: macrons are optional, the form in `lemma` is compared. For verbs the form in `info` is accepted as well. As long as `pos` is not filled in, `info` counts as a (comma-separated) list of forms if it contains no "." and no "+" (so "m.", "Adv.", "+ Akk.", "canem m." are excluded). An explicit `pos` overrides this heuristic.
 
 These rules must be secured with **tests drawn from the real profile** (table cases, German translations as in the profile: `er/sie/es ist; es gibt`, `sieh(e)!`, `nicht dürfen`).
 
@@ -139,7 +141,7 @@ These rules must be secured with **tests drawn from the real profile** (table ca
 
 ## 9. Deployment (home server)
 
-- Docker Compose: `api` (Uvicorn) and a reverse proxy (Caddy or nginx) using the existing Let's Encrypt certificate of the subdomain.
+- Docker Compose: `api` (Uvicorn) container behind the existing **Traefik** reverse proxy on the home server (routing via container labels, Let's Encrypt certificate of the subdomain).
 - HTTPS is mandatory (service workers). The subdomain resolves to the internal address on the home network (split DNS).
 - Data: SQLite file and profile folder as volumes, nightly backup.
 - **Offline use:** the app is opened once on the home network (or via VPN) and added to the home screen. After that it runs without a network; sync happens the next time a connection is available.
@@ -190,5 +192,7 @@ Use in a school requires clarification with the publishers (licence for the cont
 ## 14. Notes for Claude Code
 
 - Implement M0 first, with tests as the foundation. Answer checking is pure logic and easy to test.
-- Small, separate packages: `core` (schema, matching, Leitner, purely functional, no I/O), `api`, `web`. The logic in `core` must behave identically in the frontend and on the server: either implement it in TypeScript and secure it with conformance tests against test vectors (JSON), or use a shared test-vector file that both sides load.
+- Repository layout (decided): `schemas/` (JSON Schema), `api/` (Python: FastAPI server, `capsa` CLI, profile validation), `web/` (Svelte PWA), `vectors/` (shared JSON test vectors), `profiles/demo/` (own demo profile).
+- The API is storage and sync: accounts, profiles, events, settings. It does not check answers.
+- Answer matching and Leitner logic live in TypeScript under `web/src/lib/learning/`, pure and free of I/O. If the server ever needs the Leitner state (e.g. statistics for parents), a Python port must pass the same `vectors/*.json`.
 - No book content in commits, logs or test data.
