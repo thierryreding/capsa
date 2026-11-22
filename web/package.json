@@ -6,12 +6,20 @@
   "type": "module",
   "scripts": {
     "test": "vitest run",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "gen:api": "openapi-typescript ../schemas/openapi.json -o src/lib/api/schema.d.ts",
+    "gen:profile": "json2ts -i ../schemas/profile.schema.json -o src/lib/api/profile.d.ts --no-additionalProperties",
+    "gen": "npm run gen:api && npm run gen:profile"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
+    "json-schema-to-typescript": "^16.0.0",
+    "openapi-typescript": "^7.13.0",
     "typescript": "^5.9.3",
     "vitest": "^5.1.1",
     "yaml": "^2.9.1"
+  },
+  "dependencies": {
+    "openapi-fetch": "^0.17.0"
   }
 }
