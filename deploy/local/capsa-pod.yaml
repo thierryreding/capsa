@@ -7,6 +7,20 @@
 #
 # Containers in a pod share one network namespace: Traefik reaches the API on
 # 127.0.0.1:8000, and only Traefik's ports are published on the host.
+#
+# @REPO@ is replaced by pod.sh with the repository path: the profiles folder
+# (including profiles/private) is mounted read-only and never baked into an image.
+# The database lives in the named volume capsa-data and survives restarts.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: capsa-data
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -47,6 +61,12 @@ spec:
       env:
         - name: CAPSA_ENV
           value: local
+      volumeMounts:
+        - name: data
+          mountPath: /data
+        - name: profiles
+          mountPath: /profiles
+          readOnly: true
       livenessProbe:
         httpGet:
           path: /api/v1/health
@@ -79,6 +99,13 @@ spec:
           readOnly: true
 
   volumes:
+    - name: data
+      persistentVolumeClaim:
+        claimName: capsa-data
+    - name: profiles
+      hostPath:
+        path: "@REPO@/profiles"
+        type: Directory
     - name: traefik-dynamic
       configMap:
         name: capsa-traefik-dynamic

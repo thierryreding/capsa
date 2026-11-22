@@ -53,6 +53,19 @@ deploy/local/pod.sh logs      # follow all container logs
 deploy/local/pod.sh down
 ```
 
+Create the first admin (parent) account, then manage accounts with the CLI or the admin API:
+
+```sh
+deploy/local/pod.sh capsa user add papa --admin     # asks for the password
+deploy/local/pod.sh capsa user add lena
+deploy/local/pod.sh capsa user grant lena demo-latin
+deploy/local/pod.sh capsa user list
+```
+
+The API docs are at `http://capsa.localhost:8080/api/v1/docs`. The pod mounts `profiles/`
+read-only (including `profiles/private/`) and keeps the database in the volume `capsa-data`;
+`deploy/local/pod.sh reset` removes both pod and volume.
+
 HTTPS is on `https://capsa.localhost:8443` (self-signed), the Traefik dashboard on
 `http://localhost:8081/dashboard/`. Image builds use the repository root as context;
 `.containerignore` keeps `profiles/private/` out of every image.
