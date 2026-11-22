@@ -2,7 +2,7 @@
 
 Capsa is the project name (Latin for a container for scrolls, fitting for a Leitner box). CLI name: `capsa`, repository: `capsa`.
 
-Status: M0, M1 and M2 done, M3 (sync) next. This document is meant as the working basis for Claude Code.
+Status: M0 to M3 done, M4 (offline and deployment) next. This document is meant as the working basis for Claude Code.
 Attached: `profiles/private/latein-lehrbuch.yaml` (first profile: Latin, "Salve" + units 1-4, 139 entries).
 
 ## 1. Goal
@@ -115,6 +115,7 @@ Goal: no merge conflicts, full offline functionality.
 - Settings are simple key-value pairs with `updated_at` (last-write-wins).
 - Profiles are refreshed via ETag/`revision` and stored completely in IndexedDB. A profile update never changes IDs, so progress stays valid.
 - Clock skew: the client does not correct `ts`; the server additionally stores `received_at`. The Leitner computation uses `ts`, but if it lies clearly in the future (> 1 day), `received_at` is used instead.
+- Client implementation (M3): upload in batches of 500; accepted and duplicate events are marked synced, rejected ones are marked with their reason and not retried. Download pages by `server_seq` and stores the server copies (which gives own events their `received_at`). Every step is idempotent, an interrupted sync is simply repeated. The learner's choices in the overview (units, mode, direction, language, selection) are the setting `prefs.<profile id>`. Sync runs at start, on returning to the foreground, after a session, on the `online` event and before signing out.
 
 ## 7. Learning logic
 
