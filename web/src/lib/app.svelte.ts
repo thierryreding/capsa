@@ -144,6 +144,9 @@ export class App {
   }
 
   async logout(): Promise<void> {
+    // Upload pending answers first; otherwise they would wait on this device until
+    // the same account signs in here again.
+    await this.refresh();
     try {
       await this.api.POST('/api/v1/auth/logout');
     } catch {

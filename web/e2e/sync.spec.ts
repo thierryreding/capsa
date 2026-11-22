@@ -76,3 +76,28 @@ test('answers given offline are uploaded when the network returns', async ({ bro
   await backToForeground(phone);
   await expect(phone.locator('label.unit').getByText(/1 Fehler/)).toBeVisible();
 });
+
+test('signing out uploads pending answers first', async ({ browser, request }) => {
+  const kid = await newLearner(request);
+  const tablet = await device(browser);
+  await login(tablet, kid);
+
+  // An answer stays pending while the server cannot be reached ...
+  await tablet.route('**/api/v1/sync/**', (route) => route.abort());
+  await tablet.getByRole('button', { name: /Los geht’s/ }).click();
+  await currentEntry(tablet);
+  await typeAnswer(tablet, 'keine Ahnung');
+  await next(tablet, () => tablet.getByRole('button', { name: 'Weiter' }).click());
+  await tablet.getByRole('button', { name: 'Beenden' }).click();
+  await tablet.getByRole('button', { name: 'Zur Übersicht' }).click();
+  await expect(syncStatus(tablet)).toContainText('1 Antwort noch nicht übertragen');
+
+  // ... and is uploaded when signing out with the server reachable again.
+  await tablet.unroute('**/api/v1/sync/**');
+  await tablet.getByRole('button', { name: 'Abmelden' }).click();
+  await expect(tablet.getByRole('button', { name: 'Anmelden' })).toBeVisible();
+
+  const phone = await device(browser);
+  await login(phone, kid);
+  await expect(phone.locator('label.unit').getByText(/1 Fehler/)).toBeVisible();
+});
