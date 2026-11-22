@@ -1,0 +1,10 @@
+# Urheberrechtlich geschützte Buchinhalte: nie committen
+profiles/private/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+node_modules/
+__pycache__/
+.venv/
+dist/
+.env
