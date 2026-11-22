@@ -12,13 +12,18 @@ COPY api/ api/
 RUN uv sync --frozen --no-dev --no-editable --package capsa
 
 FROM docker.io/library/python:3.12-slim
-RUN useradd --uid 10001 --home-dir /app --no-create-home capsa
+RUN useradd --uid 10001 --home-dir /app --no-create-home capsa \
+ && mkdir /data && chown capsa:capsa /data
 COPY --from=build /app/.venv /app/.venv
-ENV PATH=/app/.venv/bin:$PATH PYTHONUNBUFFERED=1
+ENV PATH=/app/.venv/bin:$PATH PYTHONUNBUFFERED=1 \
+    CAPSA_DATABASE_URL=sqlite:////data/capsa.sqlite \
+    CAPSA_PROFILE_DIR=/profiles
+VOLUME /data
 USER capsa
 WORKDIR /app
 EXPOSE 8000
 # Health: GET /api/v1/health (probed by the pod spec; OCI images carry no HEALTHCHECK).
 # Only reachable from inside the pod; the reverse proxy forwards to it.
-CMD ["uvicorn", "capsa.app:app", "--host", "127.0.0.1", "--port", "8000", \
-     "--proxy-headers", "--forwarded-allow-ips", "127.0.0.1"]
+# Migrations run at every start; they are idempotent.
+CMD ["sh", "-c", "capsa db upgrade && exec uvicorn --factory capsa.app:create_app \
+     --host 127.0.0.1 --port 8000 --proxy-headers --forwarded-allow-ips 127.0.0.1"]
