@@ -11,6 +11,7 @@ from typing import Any
 
 import yaml
 
+from capsa.config import Settings
 from capsa.csv_import import CsvImportError, ProfileMeta, rows_to_profile
 from capsa.lint import lint_profile
 from capsa.profile_io import dump_profile, load_profile
@@ -94,6 +95,22 @@ def cmd_import_csv(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_db_upgrade(args: argparse.Namespace) -> int:
+    from capsa.migrate import upgrade
+
+    upgrade(args.database_url)
+    print("database is up to date")
+    return 0
+
+
+def _add_database_option(p: argparse.ArgumentParser) -> None:
+    p.add_argument(
+        "--database-url",
+        default=Settings.from_env().database_url,
+        help="SQLAlchemy URL (default: $CAPSA_DATABASE_URL or sqlite:///capsa.sqlite)",
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="capsa", description="Capsa vocabulary trainer tools")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -120,6 +137,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--delimiter", default=";", help="column separator (default ';')")
     p.add_argument("--force", action="store_true", help="overwrite an existing output file")
     p.set_defaults(func=cmd_import_csv)
+
+    db = sub.add_parser("db", help="database maintenance").add_subparsers(
+        dest="db_command", required=True
+    )
+    p = db.add_parser("upgrade", help="apply all pending migrations")
+    _add_database_option(p)
+    p.set_defaults(func=cmd_db_upgrade)
     return parser
 
 
