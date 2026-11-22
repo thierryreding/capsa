@@ -5,7 +5,14 @@
 import createClient from 'openapi-fetch';
 import type { components, paths } from './schema';
 
-export type { CapsaVocabularyProfile as ProfileDocument } from './profile';
+export type {
+  CapsaVocabularyProfile as ProfileDocument,
+  Entry,
+  Example,
+  Note,
+  Table,
+  Unit,
+} from './profile';
 export type Schemas = components['schemas'];
 export type ApiClient = ReturnType<typeof createApiClient>;
 
