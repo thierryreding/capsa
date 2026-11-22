@@ -52,7 +52,7 @@ Languages and textbooks are modelled as interchangeable **profiles**; nothing is
 
 - **API:** serves profiles (read-only), manages accounts and accepts learning events. The contract is an OpenAPI schema from which the TypeScript client is generated.
 - **Frontend:** PWA, offline-first. The source of truth for progress is local; the server is the sync target and backup.
-- **Stack:** frontend **Svelte** (decided) with TypeScript and Vite as a single-page app, Dexie (IndexedDB), vite-plugin-pwa (Workbox). SvelteKit only with `adapter-static`, no server-side rendering, so the app stays fully offline-first. Backend suggestion: Python 3.12 + FastAPI + Pydantic + SQLite (WAL). Tests: pytest, Vitest, Playwright for the offline path.
+- **Stack:** frontend **Svelte** (decided) with TypeScript and Vite as a single-page app, Dexie (IndexedDB), vite-plugin-pwa (Workbox). SvelteKit only with `adapter-static`, no server-side rendering, so the app stays fully offline-first. Backend suggestion: Python 3.12 + FastAPI + Pydantic + SQLite (WAL). A move to PostgreSQL is planned at some point (see 13), so database access stays behind a small storage layer with portable SQL and migrations, and nothing relies on SQLite-only features. Tests: pytest, Vitest, Playwright for the offline path.
 - **Target platforms:** iOS (Safari, as a home-screen app) and Android (Chrome). Both are equally important and covered by tests.
 - **Why PWA instead of Flutter:** no app store or TestFlight distribution, one codebase for all devices. The API is shaped so that a native client remains possible later.
 
@@ -144,6 +144,7 @@ These rules must be secured with **tests drawn from the real profile** (table ca
 - Docker Compose: `api` (Uvicorn) container behind the existing **Traefik** reverse proxy on the home server (routing via container labels, Let's Encrypt certificate of the subdomain).
 - HTTPS is mandatory (service workers). The subdomain resolves to the internal address on the home network (split DNS).
 - Data: SQLite file and profile folder as volumes, nightly backup.
+- **Local test environment:** containers are managed with **podman**. `deploy/local/` defines a pod (`podman kube play`) with Traefik in front of the API, so the proxy setup can be tested on a development machine. It is not the production configuration.
 - **Offline use:** the app is opened once on the home network (or via VPN) and added to the home screen. After that it runs without a network; sync happens the next time a connection is available.
 - iOS: use only as an installed home-screen app, because Safari deletes data of non-installed websites after long periods of inactivity. On start the app shows a warning if it is not running installed and the last sync is more than 5 days ago.
 - A VPN is optional. Sync also works at home only.
@@ -188,6 +189,7 @@ Use in a school requires clarification with the publishers (licence for the cont
 - Meaning of the abbreviation "SP" in the book (stored in the profile as `marker: SP`, assumption: factual information).
 - Whether "name all meanings" should become an option.
 - UI language: German first, with all strings kept i18n-ready (assumption, to be confirmed).
+- Move from SQLite to PostgreSQL at some point (e.g. before any opening for schools, see 11). When: to be decided; until then keep the storage layer portable (see 3).
 
 ## 14. Notes for Claude Code
 
