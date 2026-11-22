@@ -1,0 +1,15 @@
+#!/bin/sh
+# Run every check; stops at the first failure. Use before each commit.
+set -eu
+cd "$(dirname "$0")/.."
+
+echo "== python: ruff"
+uv run -q ruff check api
+uv run -q ruff format --check -q api
+echo "== python: pytest"
+uv run -q pytest -q
+echo "== web: svelte-check"
+(cd web && npm run -s check)
+echo "== web: vitest"
+(cd web && npm test --silent)
+echo "== all checks passed"

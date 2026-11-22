@@ -16,6 +16,8 @@ Specification: [SPEC.md](SPEC.md). Status: M0 (foundations).
 
 ## Development
 
+Run every check (lint, types, tests) before committing: `scripts/check.sh`.
+
 ```sh
 # Python (uv workspace, run from the repository root)
 uv sync
