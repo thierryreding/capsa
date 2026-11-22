@@ -12,4 +12,6 @@ echo "== web: svelte-check"
 (cd web && npm run -s check)
 echo "== web: vitest"
 (cd web && npm test --silent)
+echo "== web: end-to-end (Playwright)"
+(cd web && npx playwright test --reporter=dot)
 echo "== all checks passed"

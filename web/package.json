@@ -12,9 +12,11 @@
     "check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
     "gen:api": "openapi-typescript ../schemas/openapi.json -o src/lib/api/schema.d.ts",
     "gen:profile": "json2ts -i ../schemas/profile.schema.json -o src/lib/api/profile.d.ts --no-additionalProperties",
-    "gen": "npm run gen:api && npm run gen:profile"
+    "gen": "npm run gen:api && npm run gen:profile",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.1",
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@types/node": "^26.6.6",
     "fake-indexeddb": "^6.2.8",
