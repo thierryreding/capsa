@@ -9,6 +9,8 @@
     Object.entries(example).filter(([lang]) => lang !== sourceLang);
 </script>
 
+<svelte:window onkeydown={(e) => e.key === 'Escape' && onclose()} />
+<button class="backdrop" aria-hidden="true" tabindex="-1" onclick={onclose}></button>
 <div class="info" role="dialog" aria-label={t('info.open')}>
   <button class="close" onclick={onclose} aria-label={t('info.close')}>×</button>
   <p class="lemma">{entry.lemma} {#if entry.info}<small>{entry.info}</small>{/if}</p>

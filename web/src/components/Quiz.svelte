@@ -68,9 +68,12 @@
     <div class="prompt">
       <p class="word" lang={card.direction === 'src_to_tr' ? doc.profile.source_lang : app.lang}>
         {prompt(entry, card.direction, app.lang)}
+        {#if card.direction === 'src_to_tr' && entry.info && (verdict !== null || revealed)}
+          <small>{entry.info}</small>
+        {/if}
       </p>
       {#if hasExtras(entry) || entry.info}
-        <button class="info-button" onclick={() => (showInfo = true)} aria-label={t('info.open')}>ⓘ</button>
+        <button class="info-button" onclick={() => (showInfo = true)} aria-label={t('info.open')}>i</button>
       {/if}
     </div>
     {#if repeated}<p class="hint">{t('quiz.again')}</p>{/if}

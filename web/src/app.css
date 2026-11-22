@@ -253,11 +253,29 @@ legend {
 }
 
 .info-button {
+  flex: none;
   border-radius: 99px;
   width: 2.75rem;
   padding: 0;
-  font-size: 1.3rem;
+  font: italic 700 1.3rem Georgia, 'Times New Roman', serif;
   color: var(--accent);
+  border: 2px solid var(--accent);
+}
+
+.quiz .word small {
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--muted);
+  margin-left: 0.5rem;
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  border: none;
+  border-radius: 0;
+  background: rgb(0 0 0 / 0.25);
+  cursor: default;
 }
 
 .quiz form {

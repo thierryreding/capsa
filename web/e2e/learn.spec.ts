@@ -71,6 +71,10 @@ test('sign in, learn a session with typed answers, see progress', async ({ page 
       await page.getByRole('button', { name: 'Mehr Informationen' }).click();
       await expect(page.getByRole('dialog')).toContainText(entry.lemma);
       await page.getByRole('button', { name: 'Schließen' }).click();
+      await expect(page.getByRole('dialog')).toBeHidden();
+      await page.getByRole('button', { name: 'Mehr Informationen' }).click();
+      await page.keyboard.press('Escape');
+      await expect(page.getByRole('dialog')).toBeHidden();
       sawInfo = true;
     }
     if (!sawAlmost && answer.length >= 7 && !answer.includes(' ')) {
