@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import csv
 import getpass
+import json
 import sys
 from collections.abc import Callable, Sequence
 from pathlib import Path
@@ -14,6 +15,7 @@ import yaml
 
 from capsa import accounts, migrate
 from capsa.accounts import AccountError
+from capsa.app import create_app
 from capsa.clock import now_ms
 from capsa.config import Settings
 from capsa.csv_import import CsvImportError, ProfileMeta, rows_to_profile
@@ -98,6 +100,15 @@ def cmd_import_csv(args: argparse.Namespace) -> int:
         out.write_text(text, encoding="utf-8")
         counts = summary(data)
         print(f"{out}: wrote {len(counts)} units, {sum(counts.values())} entries")
+    return 0
+
+
+def cmd_openapi(args: argparse.Namespace) -> int:
+    text = json.dumps(create_app(Settings()).openapi(), indent=2, ensure_ascii=False) + "\n"
+    if args.output == "-":
+        sys.stdout.write(text)
+    else:
+        Path(args.output).write_text(text, encoding="utf-8")
     return 0
 
 
@@ -213,6 +224,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--delimiter", default=";", help="column separator (default ';')")
     p.add_argument("--force", action="store_true", help="overwrite an existing output file")
     p.set_defaults(func=cmd_import_csv)
+
+    p = sub.add_parser("openapi", help="write the API description (OpenAPI JSON)")
+    p.add_argument("-o", "--output", default="-", help="file to write, '-' for stdout")
+    p.set_defaults(func=cmd_openapi)
 
     db = sub.add_parser("db", help="database maintenance").add_subparsers(
         dest="db_command", required=True
