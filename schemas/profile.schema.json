@@ -1,0 +1,240 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://capsa.invalid/schemas/profile.schema.json",
+  "title": "Capsa vocabulary profile",
+  "description": "A profile models one textbook (or word list) for one source language with one or more translation languages. Structural rules live here; cross-reference rules (unique IDs, review order, language consistency) are checked by `capsa validate`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "profile", "units"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "profile": { "$ref": "#/$defs/profile" },
+    "units": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/unit" }
+    }
+  },
+  "$defs": {
+    "id": {
+      "description": "Stable identifier. Never renamed once published, because learning events point to it.",
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "lang": {
+      "description": "Language code (ISO 639-1 or 639-3), lower case.",
+      "type": "string",
+      "pattern": "^[a-z]{2,3}$"
+    },
+    "text": { "type": "string", "minLength": 1 },
+    "nullableText": { "type": ["string", "null"] },
+    "langList": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/lang" },
+      "uniqueItems": true
+    },
+    "stringsByLang": {
+      "description": "Map from language code to a list of strings.",
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/lang" },
+      "additionalProperties": {
+        "type": "array",
+        "items": { "type": "string", "minLength": 1 }
+      }
+    },
+    "refs": {
+      "description": "References into the book (e.g. G3 = grammar section 3, M1 = method section 1).",
+      "type": "array",
+      "items": { "$ref": "#/$defs/text" }
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "source_lang",
+        "required_translation_lang",
+        "translation_langs",
+        "revision"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "title": { "$ref": "#/$defs/text" },
+        "source_lang": { "$ref": "#/$defs/lang" },
+        "required_translation_lang": { "$ref": "#/$defs/lang" },
+        "translation_langs": {
+          "allOf": [{ "$ref": "#/$defs/langList" }, { "minItems": 1 }]
+        },
+        "note_langs": { "$ref": "#/$defs/langList" },
+        "revision": {
+          "description": "Increase on every change of the profile.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "book": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": { "$ref": "#/$defs/nullableText" },
+            "publisher": { "$ref": "#/$defs/nullableText" },
+            "isbn": { "$ref": "#/$defs/nullableText" },
+            "pages": { "$ref": "#/$defs/nullableText" }
+          }
+        },
+        "rights": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["content", "distribution"],
+          "properties": {
+            "content": {
+              "description": "Who owns the content, e.g. proprietary, own, cc-by-4.0.",
+              "$ref": "#/$defs/text"
+            },
+            "distribution": {
+              "description": "How it may be distributed, e.g. private-use-only, public.",
+              "$ref": "#/$defs/text"
+            }
+          }
+        },
+        "matching": { "$ref": "#/$defs/matching" }
+      }
+    },
+    "matching": {
+      "description": "Settings for checking typed answers. Per-language lists are keyed by the language being typed.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ignore_diacritics": {
+          "description": "Strip combining marks (macrons, breves, umlaut dots, accents) before comparing.",
+          "type": "boolean"
+        },
+        "strip_prefixes": {
+          "description": "Leading text that may be omitted, e.g. 'er/sie/es'. Matched at a word boundary: it must be followed by a space unless it ends in an apostrophe.",
+          "$ref": "#/$defs/stringsByLang"
+        },
+        "optional_articles": {
+          "description": "Leading articles that may be omitted, e.g. 'der' or elided 'l''. Same word-boundary rule as strip_prefixes.",
+          "$ref": "#/$defs/stringsByLang"
+        },
+        "optional_words": {
+          "description": "Whole words that may be omitted anywhere, e.g. placeholders like 'etw.' or 'jdn.'.",
+          "$ref": "#/$defs/stringsByLang"
+        }
+      }
+    },
+    "note": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "text"],
+      "properties": {
+        "kind": { "enum": ["usage", "grammar", "culture"] },
+        "text": { "$ref": "#/$defs/text" },
+        "refs": { "$ref": "#/$defs/refs" },
+        "marker": {
+          "description": "Marker printed next to the note in the book.",
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
+    "table": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "columns", "rows"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "title": { "$ref": "#/$defs/text" },
+        "intro": { "$ref": "#/$defs/text" },
+        "columns": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" }
+        },
+        "rows": {
+          "type": "array",
+          "items": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "example": {
+      "description": "An example sentence: one string per language code (source language plus translations).",
+      "type": "object",
+      "minProperties": 2,
+      "propertyNames": { "$ref": "#/$defs/lang" },
+      "additionalProperties": { "$ref": "#/$defs/text" }
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "lemma", "tr"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "lemma": { "$ref": "#/$defs/text" },
+        "info": {
+          "description": "Second book column, unchanged (gender, accusative, 1st person singular, word class ...).",
+          "$ref": "#/$defs/text"
+        },
+        "tr": {
+          "description": "Translations: per language a list of individual meanings.",
+          "allOf": [{ "$ref": "#/$defs/stringsByLang" }, { "minProperties": 1 }]
+        },
+        "loanwords": { "$ref": "#/$defs/stringsByLang" },
+        "examples": { "type": "array", "items": { "$ref": "#/$defs/example" } },
+        "notes": { "type": "array", "items": { "$ref": "#/$defs/note" } },
+        "refs": { "$ref": "#/$defs/refs" },
+        "pos": {
+          "description": "Word class, optional; may later be derived from info.",
+          "enum": [
+            "noun",
+            "verb",
+            "adjective",
+            "adverb",
+            "pronoun",
+            "preposition",
+            "conjunction",
+            "interjection",
+            "numeral",
+            "particle",
+            "phrase"
+          ]
+        },
+        "gender": { "enum": ["m", "f", "n", "c"] },
+        "deprecated": {
+          "description": "Entries are never deleted, only marked deprecated.",
+          "type": "boolean"
+        }
+      }
+    },
+    "unit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "number", "title", "entries"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "number": {
+          "description": "Order of the unit in the book; review lists may only point to lower numbers.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "title": { "$ref": "#/$defs/text" },
+        "book_ref": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "chapter": { "$ref": "#/$defs/text" },
+            "audio": { "$ref": "#/$defs/text" },
+            "pages": { "type": "array", "items": { "type": "integer", "minimum": 0 } }
+          }
+        },
+        "review": {
+          "description": "Entry IDs from earlier units to repeat before this unit.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/id" },
+          "uniqueItems": true
+        },
+        "notes": { "type": "array", "items": { "$ref": "#/$defs/note" } },
+        "tables": { "type": "array", "items": { "$ref": "#/$defs/table" } },
+        "entries": { "type": "array", "items": { "$ref": "#/$defs/entry" } }
+      }
+    }
+  }
+}

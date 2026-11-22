@@ -1,0 +1,144 @@
+# Capsa demo profile: Latin -> German / French.
+#
+# All words, sentences and notes in this file are written by the Capsa authors.
+# It contains no textbook content and is used by tests and examples.
+# It deliberately covers the patterns the answer checker has to handle:
+# "er/sie/es" prefixes, optional parentheses, slash alternatives, placeholder
+# words (etw., jdn.), articles, verb forms in `info`, trailing "!".
+schema_version: 1
+
+profile:
+  id: demo-latin
+  title: "Demo: Latein am Meer"
+  source_lang: la
+  required_translation_lang: de
+  translation_langs: [de, fr]
+  note_langs: [de]
+  revision: 1
+  book:
+    title: null
+    publisher: null
+    isbn: null
+    pages: null
+  rights:
+    content: own
+    distribution: public
+  matching:
+    ignore_diacritics: true
+    strip_prefixes:
+      de: ["er/sie/es"]
+      fr: ["il/elle"]
+    optional_articles:
+      de: ["der", "die", "das"]
+      fr: ["le", "la", "les", "l'"]
+    optional_words:
+      de: ["etw.", "jdn.", "jdm."]
+      fr: ["qc.", "qn."]
+
+units:
+  - id: u1
+    number: 1
+    title: "Am Hafen"
+    notes:
+      - {kind: usage, text: "Lerne jede Vokabel mit ihrer Bedeutung und sprich sie laut aus."}
+    entries:
+      - id: u1-nauta
+        lemma: nauta
+        info: "m."
+        tr: {de: ["der Seemann", "der Matrose"], fr: ["le marin"]}
+        notes:
+          - {kind: grammar, text: "Die meisten Wörter auf -a sind feminin; nauta ist eine Ausnahme."}
+      - id: u1-insula
+        lemma: īnsula
+        info: "f."
+        tr: {de: ["die Insel"], fr: ["l'île"]}
+        loanwords: {de: ["isoliert"], en: ["insular"]}
+      - id: u1-navigat
+        lemma: nāvigat
+        tr: {de: ["er/sie/es segelt", "er/sie/es fährt (zur See)"], fr: ["il/elle navigue"]}
+        examples:
+          - {la: "Nauta ad īnsulam nāvigat.", de: "Der Seemann segelt zur Insel.", fr: "Le marin navigue vers l'île."}
+      - id: u1-spectat
+        lemma: spectat
+        tr: {de: ["er/sie/es betrachtet", "er/sie/es schaut (an)"]}
+      - id: u1-ventus
+        lemma: ventus
+        info: "m."
+        tr: {de: ["der Wind"], fr: ["le vent"]}
+        loanwords: {de: ["Ventilator"], en: ["vent"]}
+      - id: u1-procul
+        lemma: procul
+        info: "Adv."
+        tr: {de: ["fern"], fr: ["loin"]}
+      - id: u1-mane
+        lemma: māne
+        info: "Adv."
+        tr: {de: ["morgens", "früh (am Morgen)"]}
+      - id: u1-heus
+        lemma: "heus!"
+        tr: {de: ["hallo!", "he(da)!"]}
+      - id: u1-is-ea-id
+        lemma: "is/ea/id"
+        info: "Dem.-Pron."
+        tr: {de: ["er/sie/es", "dieser/diese/dieses"], fr: ["il/elle"]}
+      - id: u1-trans
+        lemma: trāns
+        info: "Präp. + Akk."
+        tr: {de: ["über (… hinüber)", "jenseits"]}
+
+  - id: u2
+    number: 2
+    title: "Auf dem Meer"
+    review: [u1-nauta, u1-ventus]
+    notes:
+      - {kind: culture, text: "Im Winter fuhren antike Schiffe kaum aus, weil Stürme zu gefährlich waren.", marker: K}
+    tables:
+      - id: u2-personal-endings
+        title: "Personalendungen (Präsens)"
+        intro: "So endet ein Verb in der 1. bis 3. Person Singular."
+        columns: ["Person", "Endung", "Beispiel"]
+        rows:
+          - ["1. Sg.", "-ō", "nāvigō"]
+          - ["2. Sg.", "-s", "nāvigās"]
+          - ["3. Sg.", "-t", "nāvigat"]
+    entries:
+      - id: u2-navigare
+        lemma: nāvigāre
+        info: "nāvigō"
+        tr: {de: ["segeln", "(mit dem Schiff) fahren"], fr: ["naviguer"]}
+      - id: u2-timere
+        lemma: timēre
+        info: "timeō"
+        tr: {de: ["fürchten", "(+ Akk.) jdn./etw. fürchten", "Angst haben"]}
+        refs: [G2]
+      - id: u2-ferre
+        lemma: ferre
+        info: "ferō, fers, fert"
+        tr: {de: ["ertragen", "aushalten"], fr: ["supporter"]}
+        notes:
+          - {kind: grammar, text: "ferre bildet einige Formen unregelmäßig.", refs: [G3]}
+      - id: u2-tempestas
+        lemma: tempestās
+        info: "tempestātem f."
+        tr: {de: ["der Sturm", "das Unwetter"], fr: ["la tempête"]}
+      - id: u2-litus
+        lemma: lītus
+        info: "lītoris n."
+        tr: {de: ["die Küste", "der Strand"]}
+      - id: u2-numquam
+        lemma: numquam
+        info: "Adv."
+        tr: {de: ["niemals", "nie"], fr: ["jamais"]}
+      - id: u2-aut
+        lemma: aut
+        info: "Konj."
+        tr: {de: ["oder"], fr: ["ou"]}
+      - id: u2-cave
+        lemma: "cavē!"
+        tr: {de: ["Pass auf!", "Hüte dich!"]}
+        examples:
+          - {la: "Cavē, nauta! Tempestās venit.", de: "Pass auf, Seemann! Ein Sturm kommt."}
+      - id: u2-dare
+        lemma: dare
+        info: "dō"
+        tr: {de: ["geben", "jdm. etw. geben"]}
