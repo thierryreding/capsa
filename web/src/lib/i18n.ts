@@ -63,6 +63,12 @@ const de = {
   'summary.result': '{firstTry} von {cards} Karten auf Anhieb richtig.',
   'summary.home': 'Zur Übersicht',
   'summary.more': 'Noch eine Runde',
+  'sync.running': 'Synchronisiere …',
+  'sync.pending': '{count} Antworten noch nicht übertragen',
+  'sync.pendingOne': '1 Antwort noch nicht übertragen',
+  'sync.last': 'Zuletzt synchronisiert {when}',
+  'sync.never': 'Noch nicht synchronisiert',
+  'sync.now': 'Jetzt synchronisieren',
   'direction.src_to_tr': '{src} → {tr}',
   'direction.tr_to_src': '{tr} → {src}',
 } as const;
@@ -86,4 +92,20 @@ export function t(key: MessageKey, params: Record<string, string | number> = {})
 
 export function langName(code: string): string {
   return LANG_NAMES[code] ?? code;
+}
+
+const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
+  ['day', 86_400_000],
+  ['hour', 3_600_000],
+  ['minute', 60_000],
+];
+
+/** "vor 5 Minuten", "gestern"; under a minute: "gerade eben". */
+export function relativeTime(ms: number, now: number = Date.now()): string {
+  const diff = ms - now;
+  const format = new Intl.RelativeTimeFormat('de', { numeric: 'auto' });
+  for (const [unit, size] of UNITS) {
+    if (Math.abs(diff) >= size) return format.format(Math.round(diff / size), unit);
+  }
+  return 'gerade eben';
 }

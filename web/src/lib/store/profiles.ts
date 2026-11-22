@@ -1,5 +1,5 @@
 /** Keep local copies of the profiles released to the account up to date (ETag). */
-import type { ApiClient, ProfileDocument, Schemas } from '../api/client';
+import { ApiError, type ApiClient, type ProfileDocument, type Schemas } from '../api/client';
 import type { StoredProfile, UserDb } from './db';
 
 export interface RefreshResult {
@@ -18,7 +18,7 @@ export async function refreshProfiles(
   now: number = Date.now(),
 ): Promise<RefreshResult> {
   const list = await api.GET('/api/v1/profiles');
-  if (!list.data) throw new Error(`profile list failed: ${list.response.status}`);
+  if (!list.data) throw new ApiError('profile list failed', list.response.status);
   const summaries: Schemas['ProfileSummary'][] = list.data;
 
   const local = new Map((await db.profiles.toArray()).map((p) => [p.id, p]));
@@ -33,7 +33,7 @@ export async function refreshProfiles(
     });
     if (r.response.status === 304) continue;
     if (!r.response.ok || typeof r.data !== 'string') {
-      throw new Error(`profile ${s.id} failed: ${r.response.status}`);
+      throw new ApiError(`profile ${s.id} failed`, r.response.status);
     }
     const doc = JSON.parse(r.data) as ProfileDocument;
     const etag = r.response.headers.get('ETag') ?? s.etag;

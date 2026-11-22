@@ -16,6 +16,17 @@ export type {
 export type Schemas = components['schemas'];
 export type ApiClient = ReturnType<typeof createApiClient>;
 
+/** A request the server answered with an error status (`status`), as opposed to a
+ * network failure (a TypeError from fetch). 401 means the session has ended. */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
+
 /** Sent on every state-changing request; the server refuses them without it. */
 export const CSRF_HEADER = 'X-Capsa-CSRF';
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);

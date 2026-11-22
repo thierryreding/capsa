@@ -6,7 +6,7 @@
  * Runs at app start, when the app returns to the foreground, after a learning session
  * and when the network comes back; Safari on iOS has no background sync (SPEC 9).
  */
-import type { ApiClient, Schemas } from '../api/client';
+import { ApiError, type ApiClient, type Schemas } from '../api/client';
 import type { LocalEvent, UserDb } from './db';
 import { mergeSettings, type Json, type LocalSetting } from './settings';
 
@@ -22,17 +22,8 @@ export interface SyncResult {
   settingsPushed: number;
 }
 
-export class SyncError extends Error {
-  constructor(
-    message: string,
-    readonly status: number | null,
-  ) {
-    super(message);
-  }
-}
-
 function check<T>(r: { data?: T; response: Response }, what: string): T {
-  if (r.data === undefined) throw new SyncError(`${what} failed`, r.response.status);
+  if (r.data === undefined) throw new ApiError(`${what} failed`, r.response.status);
   return r.data;
 }
 

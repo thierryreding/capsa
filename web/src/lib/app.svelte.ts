@@ -2,7 +2,7 @@
  * Application state and actions (Svelte 5 runes). Offline-first: the app starts from
  * the last signed-in account and local data, and talks to the server in the background.
  */
-import { createApiClient } from './api/client';
+import { ApiError, createApiClient } from './api/client';
 import { indexProfile, askable, type ProfileIndex } from './learning/cards';
 import {
   applyAnswer,
@@ -35,6 +35,14 @@ import {
   type StoredProfile,
 } from './store/db';
 import { localProfiles, refreshProfiles } from './store/profiles';
+import type { Json } from './store/settings';
+import {
+  lastSync,
+  localSettings,
+  setSetting,
+  syncAll,
+  unsyncedCount,
+} from './store/sync';
 
 export type View = 'loading' | 'login' | 'home' | 'quiz' | 'summary';
 export type DirectionChoice = Direction | 'mixed';
@@ -74,10 +82,17 @@ export class App {
   states = $state<Map<string, CardState>>(new Map());
   session = $state<Session | null>(null);
 
+  /** Sync status for the overview. */
+  syncing = $state(false);
+  lastSyncAt = $state<number | null>(null);
+  unsynced = $state(0);
+
   #db: UserDb | null = null;
   #answering = false;
   #device = '';
   #allPrefs: Record<string, Prefs> = {};
+  #refreshing: Promise<void> | null = null;
+  #prefsTimer: ReturnType<typeof setTimeout> | undefined;
 
   index = $derived.by((): ProfileIndex | null => {
     const p = this.profiles.find((x) => x.id === this.profileId);
@@ -143,16 +158,33 @@ export class App {
     this.view = 'login';
   }
 
-  /** Fetch profile updates; keeps working with local copies when offline. */
-  async refresh(): Promise<void> {
-    if (!this.#db) return;
+  /**
+   * Talk to the server: profile updates, then events and settings (SPEC 6, 9).
+   * Keeps working with local data when offline. Only one refresh runs at a time.
+   */
+  refresh(): Promise<void> {
+    this.#refreshing ??= this.#refresh().finally(() => (this.#refreshing = null));
+    return this.#refreshing;
+  }
+
+  async #refresh(): Promise<void> {
+    const db = this.#db;
+    if (!db) return;
+    this.syncing = true;
     try {
-      await refreshProfiles(this.api, this.#db);
+      await refreshProfiles(this.api, db);
+      await syncAll(this.api, db);
       this.online = true;
-    } catch {
+    } catch (error) {
       this.online = false;
+      if (error instanceof ApiError && error.status === 401) await this.#expired();
+    } finally {
+      this.syncing = false;
     }
+    if (this.#db !== db) return; // signed out meanwhile
+    this.#allPrefs = await this.#loadPrefs(db);
     await this.#loadProfiles();
+    await this.#loadSyncStatus(db);
   }
 
   async selectProfile(id: string): Promise<void> {
@@ -163,12 +195,16 @@ export class App {
     this.states = computeStates(events, leitnerConfig());
   }
 
+  /** Change learning choices; they are synced as the setting `prefs.<profile>`. */
   async setPrefs(change: Partial<Prefs>): Promise<void> {
     this.prefs = { ...this.prefs, ...change };
-    if (this.profileId) {
-      this.#allPrefs[this.profileId] = $state.snapshot(this.prefs);
-      await this.#db?.setMeta('prefs', this.#allPrefs);
-    }
+    if (!this.profileId || !this.#db) return;
+    const snapshot = $state.snapshot(this.prefs) as Prefs;
+    this.#allPrefs[this.profileId] = snapshot;
+    await setSetting(this.#db, `prefs.${this.profileId}`, snapshot as unknown as Json);
+    // Several quick changes, one sync.
+    clearTimeout(this.#prefsTimer);
+    this.#prefsTimer = setTimeout(() => void this.refresh(), 2000);
   }
 
   /** The cards a session would get now. */
@@ -227,12 +263,18 @@ export class App {
     const next = new Map(this.states);
     next.set(key, applyAnswer(next.get(key), correct, event.ts, leitnerConfig()));
     this.states = next;
+    this.unsynced++;
     this.session = answerCard(session, correct);
-    if (isFinished(this.session)) this.view = 'summary';
+    if (isFinished(this.session)) {
+      this.view = 'summary';
+      void this.refresh();
+    }
   }
 
   quitSession(): void {
-    this.view = this.session && this.session.results.length > 0 ? 'summary' : 'home';
+    const answered = this.session !== null && this.session.results.length > 0;
+    this.view = answered ? 'summary' : 'home';
+    if (answered) void this.refresh();
   }
 
   goHome(): void {
@@ -243,8 +285,28 @@ export class App {
   async #enter(me: Me): Promise<void> {
     this.me = me;
     this.#db = new UserDb(me.id);
-    this.#allPrefs = (await this.#db.getMeta<Record<string, Prefs>>('prefs')) ?? {};
+    this.#allPrefs = await this.#loadPrefs(this.#db);
     await this.#loadProfiles();
+    await this.#loadSyncStatus(this.#db);
+  }
+
+  async #loadPrefs(db: UserDb): Promise<Record<string, Prefs>> {
+    const prefs: Record<string, Prefs> = {};
+    for (const [key, setting] of Object.entries(await localSettings(db))) {
+      if (key.startsWith('prefs.')) prefs[key.slice(6)] = setting.value as unknown as Prefs;
+    }
+    return prefs;
+  }
+
+  async #loadSyncStatus(db: UserDb): Promise<void> {
+    this.unsynced = await unsyncedCount(db);
+    this.lastSyncAt = (await lastSync(db)) ?? null;
+  }
+
+  async #expired(): Promise<void> {
+    this.notice = 'expired';
+    await setLastUser(null);
+    this.view = 'login';
   }
 
   async #loadProfiles(): Promise<void> {
@@ -261,9 +323,7 @@ export class App {
     try {
       const r = await this.api.GET('/api/v1/me');
       if (r.response.status === 401) {
-        this.notice = 'expired';
-        await setLastUser(null);
-        this.view = 'login';
+        await this.#expired();
         return;
       }
       if (r.data) {

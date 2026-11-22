@@ -14,8 +14,13 @@
     const refresh = () => {
       if (document.visibilityState === 'visible' && app.me) void app.refresh();
     };
+    const back = () => app.me && void app.refresh();
     document.addEventListener('visibilitychange', refresh);
-    return () => document.removeEventListener('visibilitychange', refresh);
+    window.addEventListener('online', back);
+    return () => {
+      document.removeEventListener('visibilitychange', refresh);
+      window.removeEventListener('online', back);
+    };
   });
 </script>
 

@@ -4,6 +4,7 @@
   import { askable } from '../lib/learning/cards';
   import { progressByUnit, type Selection } from '../lib/learning/session';
   import { langName, t } from '../lib/i18n';
+  import SyncStatus from './SyncStatus.svelte';
   import UnitProgress from './UnitProgress.svelte';
 
   let { app }: { app: App } = $props();
@@ -137,3 +138,5 @@
     {/if}
   </section>
 {/if}
+
+<SyncStatus {app} />
