@@ -1,0 +1,257 @@
+{
+ "description": "Learning statistics test vectors (F9). Computing statistics for `events` on the demo profile at `now` (ms, UTC) with `utcOffsetMinutes` must give `expected`; the client (web/src/lib/learning/stats.ts) and the server (api/src/capsa/progress.py) both run them. Covers: a duplicate event (e07), events of another profile (e09) and of an unknown entry (e10), which are ignored; an answer older than 30 days (e05) and one outside the 14-day history (e11); a tie in the hardest list broken by book order.",
+ "profile": "profiles/demo/demo-latin.yaml",
+ "now": 1800000000000,
+ "config": {
+  "intervalsDays": [
+   0,
+   1,
+   3,
+   7,
+   21
+  ],
+  "utcOffsetMinutes": 60
+ },
+ "events": [
+  {
+   "id": "e01",
+   "profile_id": "demo-latin",
+   "entry_id": "u1-nauta",
+   "direction": "src_to_tr",
+   "correct": true,
+   "ts": 1799827200000
+  },
+  {
+   "id": "e02",
+   "profile_id": "demo-latin",
+   "entry_id": "u1-nauta",
+   "direction": "src_to_tr",
+   "correct": true,
+   "ts": 1799913600000
+  },
+  {
+   "id": "e03",
+   "profile_id": "demo-latin",
+   "entry_id": "u1-insula",
+   "direction": "src_to_tr",
+   "correct": false,
+   "ts": 1799913600000
+  },
+  {
+   "id": "e04",
+   "profile_id": "demo-latin",
+   "entry_id": "u1-insula",
+   "direction": "src_to_tr",
+   "correct": false,
+   "ts": 1799989200000
+  },
+  {
+   "id": "e05",
+   "profile_id": "demo-latin",
+   "entry_id": "u1-ventus",
+   "direction": "src_to_tr",
+   "correct": false,
+   "ts": 1796544000000
+  },
+  {
+   "id": "e06",
+   "profile_id": "demo-latin",
+   "entry_id": "u1-ventus",
+   "direction": "src_to_tr",
+   "correct": true,
+   "ts": 1799992800000
+  },
+  {
+   "id": "e07",
+   "profile_id": "demo-latin",
+   "entry_id": "u2-dare",
+   "direction": "src_to_tr",
+   "correct": true,
+   "ts": 1799996400000
+  },
+  {
+   "id": "e07",
+   "profile_id": "demo-latin",
+   "entry_id": "u2-dare",
+   "direction": "src_to_tr",
+   "correct": true,
+   "ts": 1799996400000
+  },
+  {
+   "id": "e09",
+   "profile_id": "other-profile",
+   "entry_id": "u1-nauta",
+   "direction": "src_to_tr",
+   "correct": false,
+   "ts": 1799996400000
+  },
+  {
+   "id": "e10",
+   "profile_id": "demo-latin",
+   "entry_id": "u9-unknown",
+   "direction": "src_to_tr",
+   "correct": false,
+   "ts": 1799996400000
+  },
+  {
+   "id": "e11",
+   "profile_id": "demo-latin",
+   "entry_id": "u2-timere",
+   "direction": "src_to_tr",
+   "correct": false,
+   "ts": 1798272000000
+  },
+  {
+   "id": "e12",
+   "profile_id": "demo-latin",
+   "entry_id": "u2-timere",
+   "direction": "src_to_tr",
+   "correct": true,
+   "ts": 1799136000000
+  }
+ ],
+ "expected": {
+  "profile_id": "demo-latin",
+  "directions": [
+   "src_to_tr"
+  ],
+  "total_answers": 9,
+  "last_answer_at": 1799996400000,
+  "days": [
+   {
+    "date": "2027-01-02",
+    "correct": 0,
+    "wrong": 0
+   },
+   {
+    "date": "2027-01-03",
+    "correct": 0,
+    "wrong": 0
+   },
+   {
+    "date": "2027-01-04",
+    "correct": 0,
+    "wrong": 0
+   },
+   {
+    "date": "2027-01-05",
+    "correct": 1,
+    "wrong": 0
+   },
+   {
+    "date": "2027-01-06",
+    "correct": 0,
+    "wrong": 0
+   },
+   {
+    "date": "2027-01-07",
+    "correct": 0,
+    "wrong": 0
+   },
+   {
+    "date": "2027-01-08",
+    "correct": 0,
+    "wrong": 0
+   },
+   {
+    "date": "2027-01-09",
+    "correct": 0,
+    "wrong": 0
+   },
+   {
+    "date": "2027-01-10",
+    "correct": 0,
+    "wrong": 0
+   },
+   {
+    "date": "2027-01-11",
+    "correct": 0,
+    "wrong": 0
+   },
+   {
+    "date": "2027-01-12",
+    "correct": 0,
+    "wrong": 0
+   },
+   {
+    "date": "2027-01-13",
+    "correct": 1,
+    "wrong": 0
+   },
+   {
+    "date": "2027-01-14",
+    "correct": 1,
+    "wrong": 1
+   },
+   {
+    "date": "2027-01-15",
+    "correct": 2,
+    "wrong": 1
+   }
+  ],
+  "units": [
+   {
+    "unit_id": "u1",
+    "number": 1,
+    "title": "Am Hafen",
+    "cards": 10,
+    "fresh": 7,
+    "secure": 1,
+    "mistakes": 1,
+    "boxes": [
+     1,
+     1,
+     1,
+     0,
+     0
+    ],
+    "answers_recent": 5,
+    "correct_recent": 3
+   },
+   {
+    "unit_id": "u2",
+    "number": 2,
+    "title": "Auf dem Meer",
+    "cards": 9,
+    "fresh": 7,
+    "secure": 0,
+    "mistakes": 0,
+    "boxes": [
+     0,
+     2,
+     0,
+     0,
+     0
+    ],
+    "answers_recent": 3,
+    "correct_recent": 2
+   }
+  ],
+  "hardest": [
+   {
+    "entry_id": "u1-insula",
+    "lemma": "īnsula",
+    "meaning": "die Insel",
+    "wrong": 2,
+    "correct": 0,
+    "last_correct": false
+   },
+   {
+    "entry_id": "u1-ventus",
+    "lemma": "ventus",
+    "meaning": "der Wind",
+    "wrong": 1,
+    "correct": 1,
+    "last_correct": true
+   },
+   {
+    "entry_id": "u2-timere",
+    "lemma": "timēre",
+    "meaning": "fürchten",
+    "wrong": 1,
+    "correct": 1,
+    "last_correct": true
+   }
+  ]
+ }
+}

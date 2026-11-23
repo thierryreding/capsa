@@ -569,10 +569,102 @@
           }
         }
       }
+    },
+    "/api/v1/admin/users/{user_id}/progress/{profile_id}": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "User Progress",
+        "operationId": "user_progress_api_v1_admin_users__user_id__progress__profile_id__get",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "profile_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Profile Id"
+            }
+          },
+          {
+            "name": "utc_offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 840,
+              "minimum": -840,
+              "description": "local time offset in minutes",
+              "default": 0,
+              "title": "Utc Offset"
+            },
+            "description": "local time offset in minutes"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearningStats"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such user or profile"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "DayCount": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "title": "Date",
+            "description": "local calendar date, YYYY-MM-DD"
+          },
+          "correct": {
+            "type": "integer",
+            "title": "Correct"
+          },
+          "wrong": {
+            "type": "integer",
+            "title": "Wrong"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "correct",
+          "wrong"
+        ],
+        "title": "DayCount"
+      },
       "Event": {
         "properties": {
           "id": {
@@ -712,6 +804,44 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "HardEntry": {
+        "properties": {
+          "entry_id": {
+            "type": "string",
+            "title": "Entry Id"
+          },
+          "lemma": {
+            "type": "string",
+            "title": "Lemma"
+          },
+          "meaning": {
+            "type": "string",
+            "title": "Meaning"
+          },
+          "wrong": {
+            "type": "integer",
+            "title": "Wrong"
+          },
+          "correct": {
+            "type": "integer",
+            "title": "Correct"
+          },
+          "last_correct": {
+            "type": "boolean",
+            "title": "Last Correct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entry_id",
+          "lemma",
+          "meaning",
+          "wrong",
+          "correct",
+          "last_correct"
+        ],
+        "title": "HardEntry"
+      },
       "Health": {
         "properties": {
           "status": {
@@ -731,6 +861,75 @@
         "title": "Health"
       },
       "JsonValue": {},
+      "LearningStats": {
+        "properties": {
+          "profile_id": {
+            "type": "string",
+            "title": "Profile Id"
+          },
+          "directions": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "src_to_tr",
+                "tr_to_src"
+              ]
+            },
+            "type": "array",
+            "title": "Directions"
+          },
+          "total_answers": {
+            "type": "integer",
+            "title": "Total Answers"
+          },
+          "last_answer_at": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Answer At",
+            "description": "ms since the epoch"
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/DayCount"
+            },
+            "type": "array",
+            "title": "Days",
+            "description": "the last 14 days, oldest first"
+          },
+          "units": {
+            "items": {
+              "$ref": "#/components/schemas/UnitProgress"
+            },
+            "type": "array",
+            "title": "Units"
+          },
+          "hardest": {
+            "items": {
+              "$ref": "#/components/schemas/HardEntry"
+            },
+            "type": "array",
+            "title": "Hardest",
+            "description": "up to 10 entries most often answered wrong"
+          }
+        },
+        "type": "object",
+        "required": [
+          "profile_id",
+          "directions",
+          "total_answers",
+          "last_answer_at",
+          "days",
+          "units",
+          "hardest"
+        ],
+        "title": "LearningStats"
+      },
       "LoginRequest": {
         "properties": {
           "username": {
@@ -1014,6 +1213,70 @@
           "received_at"
         ],
         "title": "StoredEvent"
+      },
+      "UnitProgress": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "number": {
+            "type": "integer",
+            "title": "Number"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "cards": {
+            "type": "integer",
+            "title": "Cards"
+          },
+          "fresh": {
+            "type": "integer",
+            "title": "Fresh"
+          },
+          "secure": {
+            "type": "integer",
+            "title": "Secure",
+            "description": "cards in box 3 or higher"
+          },
+          "mistakes": {
+            "type": "integer",
+            "title": "Mistakes"
+          },
+          "boxes": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Boxes",
+            "description": "cards per box, index 0 = box 1"
+          },
+          "answers_recent": {
+            "type": "integer",
+            "title": "Answers Recent",
+            "description": "answers in the last 30 days"
+          },
+          "correct_recent": {
+            "type": "integer",
+            "title": "Correct Recent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "unit_id",
+          "number",
+          "title",
+          "cards",
+          "fresh",
+          "secure",
+          "mistakes",
+          "boxes",
+          "answers_recent",
+          "correct_recent"
+        ],
+        "title": "UnitProgress"
       },
       "UploadResult": {
         "properties": {

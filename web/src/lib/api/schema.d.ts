@@ -217,10 +217,39 @@ export interface paths {
         patch: operations["update_user_api_v1_admin_users__user_id__patch"];
         trace?: never;
     };
+    "/api/v1/admin/users/{user_id}/progress/{profile_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** User Progress */
+        get: operations["user_progress_api_v1_admin_users__user_id__progress__profile_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** DayCount */
+        DayCount: {
+            /**
+             * Date
+             * @description local calendar date, YYYY-MM-DD
+             */
+            date: string;
+            /** Correct */
+            correct: number;
+            /** Wrong */
+            wrong: number;
+        };
         /**
          * Event
          * @description One answer. Immutable; the learning state is computed from all events.
@@ -280,6 +309,21 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /** HardEntry */
+        HardEntry: {
+            /** Entry Id */
+            entry_id: string;
+            /** Lemma */
+            lemma: string;
+            /** Meaning */
+            meaning: string;
+            /** Wrong */
+            wrong: number;
+            /** Correct */
+            correct: number;
+            /** Last Correct */
+            last_correct: boolean;
+        };
         /** Health */
         Health: {
             /** Status */
@@ -288,6 +332,32 @@ export interface components {
             version: string;
         };
         JsonValue: unknown;
+        /** LearningStats */
+        LearningStats: {
+            /** Profile Id */
+            profile_id: string;
+            /** Directions */
+            directions: ("src_to_tr" | "tr_to_src")[];
+            /** Total Answers */
+            total_answers: number;
+            /**
+             * Last Answer At
+             * @description ms since the epoch
+             */
+            last_answer_at: number | null;
+            /**
+             * Days
+             * @description the last 14 days, oldest first
+             */
+            days: components["schemas"]["DayCount"][];
+            /** Units */
+            units: components["schemas"]["UnitProgress"][];
+            /**
+             * Hardest
+             * @description up to 10 entries most often answered wrong
+             */
+            hardest: components["schemas"]["HardEntry"][];
+        };
         /** LoginRequest */
         LoginRequest: {
             /** Username */
@@ -407,6 +477,38 @@ export interface components {
              * Format: date-time
              */
             received_at: string;
+        };
+        /** UnitProgress */
+        UnitProgress: {
+            /** Unit Id */
+            unit_id: string;
+            /** Number */
+            number: number;
+            /** Title */
+            title: string;
+            /** Cards */
+            cards: number;
+            /** Fresh */
+            fresh: number;
+            /**
+             * Secure
+             * @description cards in box 3 or higher
+             */
+            secure: number;
+            /** Mistakes */
+            mistakes: number;
+            /**
+             * Boxes
+             * @description cards per box, index 0 = box 1
+             */
+            boxes: number[];
+            /**
+             * Answers Recent
+             * @description answers in the last 30 days
+             */
+            answers_recent: number;
+            /** Correct Recent */
+            correct_recent: number;
         };
         /** UploadResult */
         UploadResult: {
@@ -970,6 +1072,48 @@ export interface operations {
                 content?: never;
             };
             /** @description No such user */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    user_progress_api_v1_admin_users__user_id__progress__profile_id__get: {
+        parameters: {
+            query?: {
+                /** @description local time offset in minutes */
+                utc_offset?: number;
+            };
+            header?: never;
+            path: {
+                user_id: string;
+                profile_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LearningStats"];
+                };
+            };
+            /** @description No such user or profile */
             404: {
                 headers: {
                     [name: string]: unknown;
