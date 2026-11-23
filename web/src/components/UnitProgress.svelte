@@ -9,9 +9,9 @@
   <span class="progress" title={t('progress.boxes')}>
     <span class="bar" aria-hidden="true">
       {#each progress.boxes as count, i (i)}
-        <span class="seg box{i + 1}" style:flex-grow={count}></span>
+        {#if count > 0}<span class="seg box{i + 1}" style:flex-grow={count}></span>{/if}
       {/each}
-      <span class="seg fresh" style:flex-grow={progress.fresh}></span>
+      {#if progress.fresh > 0}<span class="seg fresh" style:flex-grow={progress.fresh}></span>{/if}
     </span>
     <small>
       {#if progress.mistakes}{t('progress.mistakes', { count: progress.mistakes })} · {/if}

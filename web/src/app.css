@@ -12,12 +12,17 @@
   --almost-bg: #fdf1d6;
   --bad: #b3261e;
   --bad-bg: #fbe4e2;
-  --box1: #c8553d;
-  --box2: #e0a03a;
-  --box3: #c9c23a;
-  --box4: #6aa84f;
-  --box5: #2e7d4f;
+  /* Leitner boxes: an ordinal one-hue ramp, light (box 1) to dark (box 5);
+     validated with the dataviz skill's validate_palette.js --ordinal. */
+  --box1: #86b6ef;
+  --box2: #5598e7;
+  --box3: #2a78d6;
+  --box4: #1c5cab;
+  --box5: #104281;
   --fresh: #d9d2c3;
+  /* Chart series right/wrong: blue/orange, colour-blind safe (green/red is not). */
+  --right: #2a78d6;
+  --wrong: #eb6834;
   color-scheme: light dark;
   font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-size: 17px;
@@ -42,6 +47,13 @@
     --almost: #e2b65a;
     --bad: #f08a80;
     --fresh: #3a4447;
+    --box1: #184f95;
+    --box2: #256abf;
+    --box3: #3987e5;
+    --box4: #6da7ec;
+    --box5: #9ec5f4;
+    --right: #3987e5;
+    --wrong: #d95926;
   }
 }
 
@@ -184,10 +196,10 @@ legend {
 
 .progress .bar {
   display: flex;
+  gap: 2px; /* surface gap between segments */
   height: 0.45rem;
   border-radius: 99px;
   overflow: hidden;
-  background: var(--fresh);
   margin: 0.3rem 0 0.15rem;
 }
 

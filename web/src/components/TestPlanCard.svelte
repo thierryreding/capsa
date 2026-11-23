@@ -88,8 +88,10 @@
     </p>
     <span class="progress" title={t('test.secureTitle')}>
       <span class="bar" aria-hidden="true">
-        <span class="seg box5" style:flex-grow={status.secure}></span>
-        <span class="seg fresh" style:flex-grow={status.cards - status.secure}></span>
+        {#if status.secure > 0}<span class="seg box5" style:flex-grow={status.secure}></span>{/if}
+        {#if status.cards > status.secure}
+          <span class="seg fresh" style:flex-grow={status.cards - status.secure}></span>
+        {/if}
       </span>
       <small>{t('test.secure', { secure: status.secure, cards: status.cards })}</small>
     </span>
