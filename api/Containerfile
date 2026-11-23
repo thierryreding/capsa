@@ -23,7 +23,10 @@ USER capsa
 WORKDIR /app
 EXPOSE 8000
 # Health: GET /api/v1/health (probed by the pod spec; OCI images carry no HEALTHCHECK).
-# Only reachable from inside the pod; the reverse proxy forwards to it.
+# No ports are published: only the reverse proxy reaches the API, on the pod's loopback
+# or on its container network. FORWARDED_ALLOW_IPS names the proxy addresses whose
+# X-Forwarded-For is trusted (client IPs for the login rate limit); uvicorn reads it.
+ENV FORWARDED_ALLOW_IPS=127.0.0.1
 # Migrations run at every start; they are idempotent.
 CMD ["sh", "-c", "capsa db upgrade && exec uvicorn --factory capsa.app:create_app \
-     --host 127.0.0.1 --port 8000 --proxy-headers --forwarded-allow-ips 127.0.0.1"]
+     --host 0.0.0.0 --port 8000 --proxy-headers"]
