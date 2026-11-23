@@ -12,18 +12,20 @@ from typing import Any
 import click
 import yaml
 from sqlalchemy import Connection
+from sqlalchemy.engine import make_url
 
 from capsa import accounts, migrate
 from capsa.accounts import AccountError
 from capsa.app import create_app
 from capsa.backup import BackupError, backup
-from capsa.clock import now_ms
+from capsa.clock import now_ms, to_datetime
 from capsa.config import Settings
 from capsa.csv_import import CsvImportError, ProfileMeta, rows_to_profile
 from capsa.db import make_engine
 from capsa.lint import lint_profile
 from capsa.passwords import PasswordPolicyError, Passwords
 from capsa.profile_io import dump_profile, load_profile
+from capsa.stats import SNAPSHOT_THRESHOLD, sqlite_size, usage
 from capsa.validate import Issue, summary, validate_profile
 
 
@@ -199,6 +201,51 @@ def db_backup(directory: Path, keep: int, database_url: str) -> None:
         err(f"error: {exc}")
         fail()
     click.echo(f"backup written to {target}")
+
+
+def _size(n: int | None) -> str:
+    if n is None:
+        return "n/a"
+    for unit in ("B", "KB", "MB", "GB"):
+        if n < 1024 or unit == "GB":
+            return f"{n:.0f} {unit}" if unit == "B" else f"{n:.1f} {unit}"
+        n /= 1024
+    return str(n)
+
+
+@cli.command()
+@click.option("--json", "as_json", is_flag=True, help="Machine-readable output.")
+@database_option
+def stats(as_json: bool, database_url: str) -> None:
+    """Show usage: events per account, database size (for monitoring growth)."""
+    url = make_url(database_url)
+    size = sqlite_size(url.database) if url.get_backend_name() == "sqlite" else None
+    engine = make_engine(database_url)
+    try:
+        with engine.connect() as conn:
+            result = usage(conn, now_ms(), size)
+    finally:
+        engine.dispose()
+    if as_json:
+        click.echo(json.dumps(result.as_dict(), indent=2))
+        return
+    click.echo(
+        f"database: {_size(result.database_bytes)}, {result.total_events} events, "
+        f"{result.settings} settings, {result.sessions} sessions"
+    )
+    click.echo(
+        f"{'account':<20} {'role':<8} {'events':>8} {'30 days':>8} {'devices':>8}  last answer"
+    )
+    for a in result.accounts:
+        last = to_datetime(a.last_event_at).strftime("%Y-%m-%d %H:%M") if a.last_event_at else "-"
+        click.echo(
+            f"{a.username:<20} {a.role:<8} {a.events:>8} {a.events_30d:>8} {a.devices:>8}  {last}"
+        )
+    if result.over_threshold:
+        click.echo(
+            f"note: {', '.join(result.over_threshold)} passed {SNAPSHOT_THRESHOLD} events; "
+            "time to consider learning-state snapshots (SPEC 13)."
+        )
 
 
 # --- accounts ---------------------------------------------------------------

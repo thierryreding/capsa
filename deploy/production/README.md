@@ -59,6 +59,13 @@ podman compose up -d --build
 Database migrations run automatically when the API container starts. Learners get the
 new app version offered in the app ("Neue Version verfügbar").
 
+## Monitoring
+
+`podman exec capsa-api capsa stats` shows the database size and, per account, the
+number of answers (in total and in the last 30 days), devices and the last answer;
+`--json` for scripts. It notes accounts that pass 100,000 events, the point where
+learning-state snapshots become worthwhile (SPEC 13).
+
 ## Backups
 
 `capsa db backup` writes a consistent copy of the database (safe while the app is
