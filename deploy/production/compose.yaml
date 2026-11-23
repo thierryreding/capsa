@@ -1,0 +1,68 @@
+# Capsa behind an existing Traefik that discovers services by labels.
+# Configure in .env next to this file (start from .env.example), then:
+#   podman compose up -d --build        (or: docker compose up -d --build)
+# See README.md in this folder.
+name: ${CAPSA_INSTANCE:-capsa}
+
+services:
+  api:
+    image: localhost/capsa-api:${CAPSA_VERSION:-latest}
+    build:
+      context: ../..
+      dockerfile: api/Containerfile
+    container_name: ${CAPSA_INSTANCE:-capsa}-api
+    restart: unless-stopped
+    environment:
+      # Addresses whose X-Forwarded-For is trusted. Only Traefik can reach the
+      # container (no published ports), so '*' is acceptable; narrow it to Traefik's
+      # address or network (CIDR) if other containers share the network.
+      FORWARDED_ALLOW_IPS: ${CAPSA_TRUSTED_PROXIES:-*}
+    volumes:
+      - data:/data
+      - ${CAPSA_PROFILE_DIR:-./profiles}:/profiles:ro
+    networks: [proxy]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=${TRAEFIK_NETWORK:-traefik}
+      - traefik.http.routers.${CAPSA_INSTANCE:-capsa}-api.rule=Host(`${CAPSA_DOMAIN:?set CAPSA_DOMAIN in .env}`) && PathPrefix(`/api`)
+      - traefik.http.routers.${CAPSA_INSTANCE:-capsa}-api.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}
+      - traefik.http.routers.${CAPSA_INSTANCE:-capsa}-api.tls=true
+      - traefik.http.routers.${CAPSA_INSTANCE:-capsa}-api.service=${CAPSA_INSTANCE:-capsa}-api
+      - traefik.http.services.${CAPSA_INSTANCE:-capsa}-api.loadbalancer.server.port=8000
+
+  web:
+    image: localhost/capsa-web:${CAPSA_VERSION:-latest}
+    build:
+      context: ../../web
+      dockerfile: Containerfile
+    container_name: ${CAPSA_INSTANCE:-capsa}-web
+    restart: unless-stopped
+    networks: [proxy]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8090/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=${TRAEFIK_NETWORK:-traefik}
+      - traefik.http.routers.${CAPSA_INSTANCE:-capsa}-web.rule=Host(`${CAPSA_DOMAIN:?set CAPSA_DOMAIN in .env}`)
+      - traefik.http.routers.${CAPSA_INSTANCE:-capsa}-web.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}
+      - traefik.http.routers.${CAPSA_INSTANCE:-capsa}-web.tls=true
+      - traefik.http.routers.${CAPSA_INSTANCE:-capsa}-web.service=${CAPSA_INSTANCE:-capsa}-web
+      - traefik.http.services.${CAPSA_INSTANCE:-capsa}-web.loadbalancer.server.port=8090
+
+volumes:
+  # The database (and its backups in /data/backups). A named volume, so the container
+  # user can write to it under rootless podman.
+  data:
+
+networks:
+  proxy:
+    external: true
+    name: ${TRAEFIK_NETWORK:-traefik}

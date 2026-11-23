@@ -1,0 +1,11 @@
+# Nightly database backup (SPEC 9), as a systemd user unit next to rootless podman.
+# Install: see README.md in this folder.
+[Unit]
+Description=Capsa database backup
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Container name: <CAPSA_INSTANCE>-api (default capsa-api).
+Environment=CAPSA_CONTAINER=capsa-api
+ExecStart=/usr/bin/podman exec ${CAPSA_CONTAINER} capsa db backup /data/backups --keep 14

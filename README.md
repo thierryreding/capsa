@@ -74,6 +74,12 @@ HTTPS is on `https://capsa.localhost:8443` (self-signed), the Traefik dashboard 
 `http://localhost:8081/dashboard/`. Image builds use the repository root as context;
 `.containerignore` keeps `profiles/private/` out of every image.
 
+## Production
+
+`deploy/production/` runs Capsa behind an existing Traefik (label discovery) with
+`podman compose` or `docker compose`; domain and Traefik names are configured in `.env`.
+See [deploy/production/README.md](deploy/production/README.md).
+
 ## Private profile
 
 `profiles/private/` is excluded via `.gitignore`. It holds `latein-lehrbuch.yaml`, which contains textbook content.

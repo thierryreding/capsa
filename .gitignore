@@ -1,5 +1,7 @@
 # Urheberrechtlich geschützte Buchinhalte: nie committen
 profiles/private/
+# Profiles of a deployment (may contain book content)
+deploy/production/profiles/
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm
