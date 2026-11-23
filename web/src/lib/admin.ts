@@ -9,6 +9,7 @@ export type UserInfo = Schemas['UserInfo'];
 export type UserCreate = Schemas['UserCreate'];
 export type UserUpdate = Schemas['UserUpdate'];
 export type ProfileSummary = Schemas['ProfileSummary'];
+export type LearningStats = Schemas['LearningStats'];
 
 export const PASSWORD_MIN = 8;
 const USERNAME = /^[\p{L}\p{N}_.-]{1,64}$/u;
@@ -75,5 +76,22 @@ export function updateUser(
 ): Promise<Result<UserInfo>> {
   return call(() =>
     api.PATCH('/api/v1/admin/users/{user_id}', { params: { path: { user_id: id } }, body }),
+  );
+}
+
+/** Learning statistics of an account for one profile, as computed by the server. */
+export function userProgress(
+  api: ApiClient,
+  userId: string,
+  profileId: string,
+  utcOffsetMinutes: number,
+): Promise<Result<LearningStats>> {
+  return call(() =>
+    api.GET('/api/v1/admin/users/{user_id}/progress/{profile_id}', {
+      params: {
+        path: { user_id: userId, profile_id: profileId },
+        query: { utc_offset: utcOffsetMinutes },
+      },
+    }),
   );
 }

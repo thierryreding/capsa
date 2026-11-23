@@ -149,6 +149,8 @@
       {/each}
     </fieldset>
 
+    <button class="link stats-link" onclick={() => app.openStats()}>{t('stats.link')}</button>
+
     {#if planned > 0}
       <button class="primary big" onclick={() => app.beginSession()}>
         {t('home.start', { count: planned })}

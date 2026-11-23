@@ -7,6 +7,7 @@
   import Home from './components/Home.svelte';
   import Login from './components/Login.svelte';
   import Quiz from './components/Quiz.svelte';
+  import StatsPage from './components/StatsPage.svelte';
   import Summary from './components/Summary.svelte';
 
   const app = new App();
@@ -49,5 +50,7 @@
     <Summary {app} />
   {:else if app.view === 'admin'}
     <AdminPage {app} />
+  {:else if app.view === 'stats'}
+    <StatsPage {app} />
   {/if}
 </main>

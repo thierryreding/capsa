@@ -547,3 +547,137 @@ legend {
   color: var(--ok);
   font-weight: 600;
 }
+
+.stats h3 {
+  font-size: 1rem;
+  margin: 1.25rem 0 0.5rem;
+}
+
+.legend {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.swatch {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 2px;
+  margin-right: 0.35rem;
+  vertical-align: -0.05rem;
+}
+
+.swatch.right,
+.part.right {
+  background: var(--right);
+}
+
+.swatch.wrong,
+.part.wrong {
+  background: var(--wrong);
+}
+
+.readout {
+  min-height: 1.4em;
+  margin: 0.35rem 0;
+  font-size: 0.9rem;
+}
+
+.chart {
+  display: grid;
+  grid-template-columns: repeat(14, 1fr);
+  gap: 4px;
+  height: 7rem;
+  align-items: end;
+  border-bottom: 1px solid var(--border);
+}
+
+.chart .day {
+  /* a button without button looks */
+  min-height: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: stretch;
+  cursor: pointer;
+  border-radius: 4px;
+  outline-offset: 2px;
+}
+
+.chart .day small {
+  text-align: center;
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-top: 0.2rem;
+}
+
+.chart .day.active .stack {
+  outline: 2px solid var(--text);
+  outline-offset: 1px;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px; /* surface gap between the stacked parts */
+  min-height: 0;
+}
+
+.stack .part {
+  min-height: 2px;
+}
+
+.stack .part:first-child {
+  border-radius: 4px 4px 0 0; /* rounded data end, square at the baseline */
+}
+
+details {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+}
+
+details table {
+  border-collapse: collapse;
+  margin-top: 0.35rem;
+}
+
+details td,
+details th {
+  padding: 0.15rem 0.75rem 0.15rem 0;
+  text-align: left;
+}
+
+.stat-units {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.stat-units li {
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.hardest {
+  margin: 0;
+  padding-left: 1.4rem;
+}
+
+.hardest li {
+  margin-bottom: 0.3rem;
+}
+
+.hardest small {
+  display: block;
+}
+
+.stats-link {
+  display: block;
+  margin: 0 0 0.5rem;
+}

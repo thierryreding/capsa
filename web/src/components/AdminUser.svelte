@@ -2,6 +2,7 @@
   import type { App } from '../lib/app.svelte';
   import { checkPassword, updateUser, type ProfileSummary, type UserInfo } from '../lib/admin';
   import { t } from '../lib/i18n';
+  import AdminProgress from './AdminProgress.svelte';
   import ProfileChoice from './ProfileChoice.svelte';
 
   let {
@@ -13,6 +14,7 @@
     $props();
 
   let editing = $state(false);
+  let showProgress = $state(false);
   let displayName = $state('');
   let selected = $state<string[]>([]);
   let password = $state('');
@@ -78,10 +80,19 @@
         {user.role === 'admin' ? t('admin.allProfiles') : titles || t('admin.noProfiles')}
       </small>
     </span>
-    {#if !editing}
-      <button class="link" onclick={open}>{t('admin.edit')}</button>
-    {/if}
+    <span>
+      <button class="link" aria-expanded={showProgress} onclick={() => (showProgress = !showProgress)}>
+        {t('stats.progress')}
+      </button>
+      {#if !editing}
+        <button class="link" onclick={open}>{t('admin.edit')}</button>
+      {/if}
+    </span>
   </div>
+
+  {#if showProgress}
+    <AdminProgress {app} {user} {profiles} />
+  {/if}
 
   {#if message && !editing}<p class="hint" role="status">{message}</p>{/if}
 
