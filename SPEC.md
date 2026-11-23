@@ -2,7 +2,7 @@
 
 Capsa is the project name (Latin for a container for scrolls, fitting for a Leitner box). CLI name: `capsa`, repository: `capsa`.
 
-Status: M0 to M4 done, M5 (comfort) next. This document is meant as the working basis for Claude Code.
+Status: M0 to M5 done. This document is meant as the working basis for Claude Code.
 Attached: `profiles/private/latein-lehrbuch.yaml` (first profile: Latin, "Salve" + units 1-4, 139 entries).
 
 ## 1. Goal
@@ -187,7 +187,7 @@ Use in a school requires clarification with the publishers (licence for the cont
 3. **M2 Local frontend:** login, load profile, flashcards and typed answers, Leitner state in IndexedDB, info icon.
 4. **M3 Sync:** event upload and download, settings, tests with two simulated devices.
 5. **M4 Offline and deployment:** service worker, installability, Docker Compose, HTTPS, iOS hint, backup.
-6. **M5 Comfort:** parent mode, multiple choice (done: options from the same word class and nearby units, never a second right answer; a right choice counts like any answer), test-date planning, statistics per unit, user profile with a display name that the app greets with (done: a synced setting, set by the user, changeable by admins), admin page in the web app (done: create accounts, release profiles, set display names, reset passwords, disable accounts from a phone or browser, using the `/admin/users` API; the CLI stays for bootstrapping the first admin).
+6. **M5 Comfort** (done): parent mode ('Abfragen lassen': the parent sees the solution at once and judges the spoken answer), multiple choice (options from the same word class and nearby units, never a second right answer; a right choice counts like any answer), test-date planning (secure = box 3 or higher, i.e. two right answers in a row; today's goal spreads the remaining right answers over the days before the test; the plan is the synced setting test.<profile>), statistics per unit (14-day history, per unit box distribution, secure cards and recent accuracy, hardest words; computed on the device for the learner and by the server for parents, both pinned by vectors/stats.json; colours colour-blind safe), user profile with a display name that the app greets with (done: a synced setting, set by the user, changeable by admins), admin page in the web app (done: create accounts, release profiles, set display names, reset passwords, disable accounts from a phone or browser, using the `/admin/users` API; the CLI stays for bootstrapping the first admin).
 
 ## 13. Open points
 
