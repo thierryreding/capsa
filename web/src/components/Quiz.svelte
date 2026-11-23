@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount, tick } from 'svelte';
   import type { App } from '../lib/app.svelte';
   import { hasExtras, matchContext, prompt, solution } from '../lib/learning/cards';
   import { choicesFor, type Choice } from '../lib/learning/choice';
@@ -29,12 +30,14 @@
   let optionList: HTMLOListElement | undefined = $state();
   let next: HTMLButtonElement | undefined = $state();
 
-  // Reset for every new card.
-  $effect(() => {
-    void position;
+  /**
+   * Fresh state for the card on top of the queue. Called when the quiz opens and right
+   * after an answer has been stored, i.e. exactly when the card changes (an effect
+   * would run a moment later and could wipe input already typed into the new card).
+   */
+  function resetCard() {
     typed = '';
     verdict = null;
-    revealed = false;
     showInfo = false;
     shownAt = Date.now();
     responseMs = null;
@@ -48,8 +51,10 @@
       app.prefs.mode === 'choice' && index && current
         ? choicesFor(index, current.entryId, current.direction, app.lang)
         : [];
-    queueMicrotask(() => (input ?? optionList?.querySelector('button'))?.focus());
-  });
+    void tick().then(() => (input ?? optionList?.querySelector('button'))?.focus());
+  }
+
+  onMount(resetCard);
 
   $effect(() => {
     if (verdict === 'correct' || verdict === 'wrong') queueMicrotask(() => next?.focus());
@@ -81,9 +86,12 @@
     revealed = true;
   }
 
-  function done(correct: boolean) {
+  async function done(correct: boolean) {
     responseMs ??= Date.now() - shownAt;
-    void app.answer(correct, responseMs);
+    const before = app.session;
+    await app.answer(correct, responseMs);
+    // Only if the answer was taken (a double tap is ignored) and the quiz goes on.
+    if (app.session !== before && app.session?.queue.length) resetCard();
   }
 </script>
 
