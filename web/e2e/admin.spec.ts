@@ -13,7 +13,7 @@ async function loginAdmin(page: import('@playwright/test').Page) {
 }
 
 test('parents manage accounts from the app', async ({ page, browser }) => {
-  const kid = `kid${Date.now().toString(36)}`;
+  const kid = `kid${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   await loginAdmin(page);
 
   // Create a learner with a book and a display name.
