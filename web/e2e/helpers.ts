@@ -42,7 +42,7 @@ export async function login(page: Page, username: string, greeting: string = use
 }
 
 export async function currentEntry(page: Page): Promise<Entry> {
-  const word = (await page.locator('.quiz .word').innerText()).split('\n')[0].trim();
+  const word = (await page.locator('.quiz .word .term').innerText()).trim();
   const entry = byLemma.get(word);
   expect(entry, `prompt ${word} is a demo lemma`).toBeDefined();
   return entry!;

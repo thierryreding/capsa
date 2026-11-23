@@ -39,7 +39,7 @@
     void app.setPrefs({ units: units.length === all.length ? null : units });
   }
 
-  const modes: QuizMode[] = ['typed', 'choice', 'flashcard'];
+  const modes: QuizMode[] = ['typed', 'choice', 'flashcard', 'parent'];
   const selections: Selection[] = ['mixed', 'due', 'mistakes', 'all'];
   const directions: DirectionChoice[] = ['src_to_tr', 'tr_to_src', 'mixed'];
 </script>

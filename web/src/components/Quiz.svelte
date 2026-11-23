@@ -39,6 +39,8 @@
     shownAt = Date.now();
     responseMs = null;
     chosen = null;
+    // Parent mode: the parent sees the solution at once and judges the spoken answer.
+    revealed = app.prefs.mode === 'parent';
     // Options are drawn once per card, so they stay put while answering.
     const index = app.index;
     const current = app.session?.queue[0];
@@ -80,6 +82,7 @@
   }
 
   function done(correct: boolean) {
+    responseMs ??= Date.now() - shownAt;
     void app.answer(correct, responseMs);
   }
 </script>
@@ -95,7 +98,7 @@
   <section class="card quiz">
     <div class="prompt">
       <p class="word" lang={card.direction === 'src_to_tr' ? doc.profile.source_lang : app.lang}>
-        {prompt(entry, card.direction, app.lang)}
+        <span class="term">{prompt(entry, card.direction, app.lang)}</span>
         {#if card.direction === 'src_to_tr' && entry.info && (verdict !== null || revealed)}
           <small>{entry.info}</small>
         {/if}
@@ -105,6 +108,7 @@
       {/if}
     </div>
     {#if repeated}<p class="hint">{t('quiz.again')}</p>{/if}
+    {#if app.prefs.mode === 'parent'}<p class="hint">{t('quiz.parentHint')}</p>{/if}
 
     {#if app.prefs.mode === 'typed'}
       <form onsubmit={check}>
@@ -168,6 +172,9 @@
           <button class="primary" bind:this={next} onclick={() => done(verdict === 'correct')}>
             {t('quiz.next')}
           </button>
+        {:else if app.prefs.mode === 'parent'}
+          <button class="primary" onclick={() => done(true)}>{t('quiz.parentRight')}</button>
+          <button onclick={() => done(false)}>{t('quiz.parentWrong')}</button>
         {:else}
           <button class="primary" onclick={() => done(true)}>{t('quiz.knew')}</button>
           <button onclick={() => done(false)}>{t('quiz.didntKnow')}</button>
