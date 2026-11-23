@@ -525,3 +525,13 @@ legend {
   background: var(--bad-bg);
   border-color: var(--bad);
 }
+
+.test-plan h2 {
+  font-size: 1.2rem;
+  margin-bottom: 0.25rem;
+}
+
+.ok-text {
+  color: var(--ok);
+  font-weight: 600;
+}

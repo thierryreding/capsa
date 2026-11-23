@@ -9,6 +9,7 @@ import {
   cardKey,
   computeStates,
   DEFAULT_INTERVALS_DAYS,
+  type AnswerEvent,
   type CardState,
   type LeitnerConfig,
 } from './learning/leitner';
@@ -34,6 +35,7 @@ import {
   type Mode,
   type StoredProfile,
 } from './store/db';
+import type { TestPlan } from './learning/plan';
 import { requestPersistentStorage } from './platform';
 import { localProfiles, refreshProfiles } from './store/profiles';
 import type { Json } from './store/settings';
@@ -84,6 +86,12 @@ export class App {
   profileId = $state<string | null>(null);
   prefs = $state<Prefs>({ ...DEFAULT_PREFS });
   states = $state<Map<string, CardState>>(new Map());
+  /** Answer events of the selected profile (for today's progress towards a test). */
+  events = $state<AnswerEvent[]>([]);
+  /** The test planned for the selected profile, if any (synced setting `test.<profile>`). */
+  testPlan = $state<TestPlan | null>(null);
+  /** Kind of the running or last session, so "one more round" continues it. */
+  sessionKind = $state<'normal' | 'test'>('normal');
   session = $state<Session | null>(null);
 
   /** A new app version is waiting; offered in the overview, applied by reloading. */
@@ -101,6 +109,7 @@ export class App {
   #allPrefs: Record<string, Prefs> = {};
   #refreshing: Promise<void> | null = null;
   #prefsTimer: ReturnType<typeof setTimeout> | undefined;
+  #allPlans: Record<string, TestPlan | null> = {};
 
   index = $derived.by((): ProfileIndex | null => {
     const p = this.profiles.find((x) => x.id === this.profileId);
@@ -218,6 +227,7 @@ export class App {
     }
     if (this.#db !== db) return; // signed out meanwhile
     this.#allPrefs = await this.#loadPrefs(db);
+    this.#allPlans = await this.#loadPlans(db);
     await this.#applyAccountSettings(db);
     await this.#loadProfiles();
     await this.#loadSyncStatus(db);
@@ -226,8 +236,10 @@ export class App {
   async selectProfile(id: string): Promise<void> {
     this.profileId = id;
     this.prefs = { ...DEFAULT_PREFS, ...this.#allPrefs[id] };
+    this.testPlan = this.#allPlans[id] ?? null;
     await this.#db?.setMeta('profile', id);
     const events = this.#db ? await eventsForProfile(this.#db, id) : [];
+    this.events = events;
     this.states = computeStates(events, leitnerConfig());
   }
 
@@ -238,31 +250,51 @@ export class App {
     const snapshot = $state.snapshot(this.prefs) as Prefs;
     this.#allPrefs[this.profileId] = snapshot;
     await setSetting(this.#db, `prefs.${this.profileId}`, snapshot as unknown as Json);
-    // Several quick changes, one sync.
+    this.#syncSoon();
+  }
+
+  /** Plan a test (or remove it with null); a synced setting per profile. */
+  async setTestPlan(plan: TestPlan | null): Promise<void> {
+    this.testPlan = plan;
+    if (!this.profileId || !this.#db) return;
+    this.#allPlans[this.profileId] = plan;
+    await setSetting(this.#db, `test.${this.profileId}`, plan as unknown as Json);
+    this.#syncSoon();
+  }
+
+  /** Several quick changes, one sync. */
+  #syncSoon(): void {
     clearTimeout(this.#prefsTimer);
     this.#prefsTimer = setTimeout(() => void this.refresh(), 2000);
   }
 
-  /** The cards a session would get now. */
-  plannedCards(): Card[] {
+  /** Entries that can be asked in the current translation language. */
+  askableEntries() {
     const index = this.index;
     if (!index) return [];
-    const lang = this.lang;
+    return index.refs.filter((r) => askable(index.entries.get(r.id)!, this.lang));
+  }
+
+  /** The cards a session would get now; 'test' practises the planned test's units. */
+  plannedCards(kind: 'normal' | 'test' = 'normal'): Card[] {
+    const index = this.index;
+    if (!index || (kind === 'test' && !this.testPlan)) return [];
     return selectCards(this.states, {
       profileId: index.doc.profile.id,
-      entries: index.refs.filter((r) => askable(index.entries.get(r.id)!, lang)),
-      units: this.units,
+      entries: this.askableEntries(),
+      units: kind === 'test' ? new Set(this.testPlan!.units) : this.units,
       directions: this.directions,
-      selection: this.prefs.selection,
+      selection: kind === 'test' ? 'test' : this.prefs.selection,
       size: DEFAULT_SESSION_SIZE,
       now: Date.now(),
       config: leitnerConfig(),
     });
   }
 
-  beginSession(): void {
-    const cards = this.plannedCards();
+  beginSession(kind: 'normal' | 'test' = 'normal'): void {
+    const cards = this.plannedCards(kind);
     if (cards.length === 0) return;
+    this.sessionKind = kind;
     this.session = startSession(cards);
     this.view = 'quiz';
   }
@@ -299,6 +331,7 @@ export class App {
     const next = new Map(this.states);
     next.set(key, applyAnswer(next.get(key), correct, event.ts, leitnerConfig()));
     this.states = next;
+    this.events = [...this.events, event];
     this.unsynced++;
     this.session = answerCard(session, correct);
     if (isFinished(this.session)) {
@@ -328,8 +361,17 @@ export class App {
     this.#db = new UserDb(me.id);
     await this.#applyAccountSettings(this.#db);
     this.#allPrefs = await this.#loadPrefs(this.#db);
+    this.#allPlans = await this.#loadPlans(this.#db);
     await this.#loadProfiles();
     await this.#loadSyncStatus(this.#db);
+  }
+
+  async #loadPlans(db: UserDb): Promise<Record<string, TestPlan | null>> {
+    const plans: Record<string, TestPlan | null> = {};
+    for (const [key, setting] of Object.entries(await localSettings(db))) {
+      if (key.startsWith('test.')) plans[key.slice(5)] = setting.value as unknown as TestPlan | null;
+    }
+    return plans;
   }
 
   async #loadPrefs(db: UserDb): Promise<Record<string, Prefs>> {

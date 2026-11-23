@@ -7,6 +7,7 @@
   import Greeting from './Greeting.svelte';
   import InstallHint from './InstallHint.svelte';
   import SyncStatus from './SyncStatus.svelte';
+  import TestPlanCard from './TestPlanCard.svelte';
   import UnitProgress from './UnitProgress.svelte';
 
   let { app }: { app: App } = $props();
@@ -67,6 +68,8 @@
 {#if !doc}
   <section class="card"><p>{t('home.noProfiles')}</p></section>
 {:else}
+  <TestPlanCard {app} />
+
   <section class="card">
     {#if app.profiles.length > 1}
       <label>
