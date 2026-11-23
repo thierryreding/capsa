@@ -40,7 +40,8 @@
   }
 
   const modes: QuizMode[] = ['typed', 'choice', 'flashcard', 'parent'];
-  const selections: Selection[] = ['mixed', 'due', 'mistakes', 'all'];
+  // 'test' is started from the test card, not chosen here.
+  const selections: Exclude<Selection, 'test'>[] = ['mixed', 'due', 'mistakes', 'all'];
   const directions: DirectionChoice[] = ['src_to_tr', 'tr_to_src', 'mixed'];
 </script>
 

@@ -74,6 +74,15 @@ describe('selectCards', () => {
     );
   });
 
+  it('test: cards not yet secure, mistakes first, then box 2, then new', () => {
+    const s = states([
+      ['a', true, 5], ['a', true, 4], // box 3: secure, skipped
+      ['b', true, 3], // box 2
+      ['c', false, 2], // mistake
+    ]);
+    expect(ids(selectCards(s, options({ selection: 'test' })))).toEqual(['c', 'b', 'd', 'e', 'f']);
+  });
+
   it('restricts to the selected units', () => {
     expect(ids(selectCards(st, options({ units: new Set(['u2']) })))).toEqual(['x', 'y']);
   });

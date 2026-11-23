@@ -15,6 +15,9 @@ import {
 } from './leitner';
 import type { Direction } from './match';
 
+/** Box from which a card counts as secure for a test (two right answers in a row). */
+export const SECURE_BOX = 3;
+
 export interface Card {
   entryId: string;
   direction: Direction;
@@ -25,8 +28,11 @@ export interface EntryRef {
   unitId: string;
 }
 
-/** mixed: mistakes, then due, then new cards. */
-export type Selection = 'mixed' | 'due' | 'mistakes' | 'all';
+/**
+ * mixed: mistakes, then due, then new cards.
+ * test: cards not yet secure for a test (box < 3): mistakes, then box 2, then new.
+ */
+export type Selection = 'mixed' | 'due' | 'mistakes' | 'all' | 'test';
 
 export interface SelectOptions {
   profileId: string;
@@ -104,6 +110,13 @@ export function selectCards(states: ReadonlyMap<string, CardState>, o: SelectOpt
     case 'mixed':
       picked = [...mistakes, ...due, ...fresh];
       break;
+    case 'test': {
+      const almost = all
+        .filter((c) => c.state && !isMistake(c.state) && c.state.box < SECURE_BOX)
+        .sort(byOldest);
+      picked = [...mistakes, ...almost, ...fresh];
+      break;
+    }
   }
   return shuffle(
     picked.slice(0, o.size).map((c) => c.card),
