@@ -47,6 +47,13 @@
   <button class="link" onclick={() => app.logout()}>{t('home.logout')}</button>
 </header>
 
+{#if app.updateAvailable}
+  <p class="notice" role="status">
+    {t('update.available')}
+    <button class="link" onclick={() => app.applyUpdate()}>{t('update.apply')}</button>
+  </p>
+{/if}
+
 {#if !doc}
   <section class="card"><p>{t('home.noProfiles')}</p></section>
 {:else}

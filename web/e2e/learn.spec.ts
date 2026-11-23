@@ -85,3 +85,17 @@ test('a double tap on "Weiter" records only one answer', async ({ page, request 
   await page.waitForTimeout(300);
   await expect(page.getByText('Karte 2 von 10')).toBeVisible(); // not skipped to 3
 });
+
+test('opens without any network after the first visit', async ({ page, context, request }) => {
+  const kid = await newLearner(request);
+  await login(page, kid);
+  await page.evaluate(() => navigator.serviceWorker.ready);
+
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByText(`Hallo ${kid}!`)).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Demo: Latein am Meer' })).toBeVisible();
+  await expect(page.getByText(/^Offline/)).toBeVisible();
+  await page.getByRole('button', { name: /Los geht’s/ }).click();
+  await expect(page.getByText('Karte 1 von 10')).toBeVisible();
+});

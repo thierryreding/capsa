@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { registerSW } from 'virtual:pwa-register';
   import { App } from './lib/app.svelte';
   import { t } from './lib/i18n';
   import Home from './components/Home.svelte';
@@ -10,6 +11,17 @@
   const app = new App();
 
   onMount(() => {
+    // Service worker: the app loads without a network after the first visit (SPEC 9).
+    const updateSW = registerSW({
+      onNeedRefresh: () => (app.updateAvailable = true),
+      onRegisteredSW: (_url, registration) => {
+        // Look for a new version whenever the app comes back to the foreground.
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') void registration?.update();
+        });
+      },
+    });
+    app.applyUpdate = () => void updateSW(true);
     void app.start();
     const refresh = () => {
       if (document.visibilityState === 'visible' && app.me) void app.refresh();

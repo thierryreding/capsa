@@ -373,6 +373,14 @@ legend {
   color: var(--bad);
 }
 
+.notice {
+  background: var(--card);
+  border: 1px solid var(--accent);
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  margin: 0 0 0.75rem;
+}
+
 .offline {
   background: var(--almost-bg);
   color: var(--almost);

@@ -82,6 +82,10 @@ export class App {
   states = $state<Map<string, CardState>>(new Map());
   session = $state<Session | null>(null);
 
+  /** A new app version is waiting; offered in the overview, applied by reloading. */
+  updateAvailable = $state(false);
+  applyUpdate: () => void = () => location.reload();
+
   /** Sync status for the overview. */
   syncing = $state(false);
   lastSyncAt = $state<number | null>(null);

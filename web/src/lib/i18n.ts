@@ -63,6 +63,8 @@ const de = {
   'summary.result': '{firstTry} von {cards} Karten auf Anhieb richtig.',
   'summary.home': 'Zur Übersicht',
   'summary.more': 'Noch eine Runde',
+  'update.available': 'Eine neue Version von Capsa ist da.',
+  'update.apply': 'Aktualisieren',
   'sync.running': 'Synchronisiere …',
   'sync.pending': '{count} Antworten noch nicht übertragen',
   'sync.pendingOne': '1 Antwort noch nicht übertragen',

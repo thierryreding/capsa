@@ -18,7 +18,8 @@ export default defineConfig({
       reuseExistingServer: false,
     },
     {
-      command: `npx vite --port ${webPort} --strictPort`,
+      // The production build, so the service worker is part of the tests.
+      command: `npx vite build --logLevel warn && npx vite preview --port ${webPort} --strictPort`,
       url: `http://localhost:${webPort}`,
       env: { CAPSA_API: `http://127.0.0.1:${apiPort}` },
       reuseExistingServer: false,

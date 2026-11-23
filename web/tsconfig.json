@@ -4,7 +4,7 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["node", "svelte", "vite/client"],
+    "types": ["node", "svelte", "vite/client", "vite-plugin-pwa/client", "vite-plugin-pwa/pwa-assets"],
     "strict": true,
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
@@ -12,5 +12,5 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["src", "e2e", "vite.config.ts", "playwright.config.ts"]
+  "include": ["src", "e2e", "vite.config.ts", "playwright.config.ts", "pwa-assets.config.ts"]
 }
