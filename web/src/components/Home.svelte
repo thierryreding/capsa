@@ -46,7 +46,12 @@
 
 <header class="bar-top">
   <Greeting {app} />
-  <button class="link" onclick={() => app.logout()}>{t('home.logout')}</button>
+  <span>
+    {#if app.me?.role === 'admin'}
+      <button class="link" onclick={() => app.openAdmin()}>{t('admin.link')}</button>
+    {/if}
+    <button class="link" onclick={() => app.logout()}>{t('home.logout')}</button>
+  </span>
 </header>
 
 <InstallHint {app} />

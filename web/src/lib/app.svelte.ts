@@ -48,7 +48,7 @@ import {
 /** Setting key of the display name (validated by the server). */
 export const DISPLAY_NAME = 'display_name';
 
-export type View = 'loading' | 'login' | 'home' | 'quiz' | 'summary';
+export type View = 'loading' | 'login' | 'home' | 'quiz' | 'summary' | 'admin';
 export type DirectionChoice = Direction | 'mixed';
 export type QuizMode = Extract<Mode, 'typed' | 'flashcard'>;
 
@@ -311,6 +311,10 @@ export class App {
     const answered = this.session !== null && this.session.results.length > 0;
     this.view = answered ? 'summary' : 'home';
     if (answered) void this.refresh();
+  }
+
+  openAdmin(): void {
+    if (this.me?.role === 'admin') this.view = 'admin';
   }
 
   goHome(): void {

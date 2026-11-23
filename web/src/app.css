@@ -420,3 +420,64 @@ legend {
 .name-edit label {
   margin-bottom: 0.25rem;
 }
+
+.users {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.user {
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.user.disabled b {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+.user-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.user small {
+  color: var(--muted);
+}
+
+.user form,
+.row-form {
+  margin-top: 0.75rem;
+}
+
+.row-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.row-form label {
+  flex: 1;
+  margin: 0;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.25rem 0;
+}
+
+.check input {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.field-hint {
+  display: block;
+  margin: -0.5rem 0 0.75rem;
+}

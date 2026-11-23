@@ -3,6 +3,7 @@
   import { registerSW } from 'virtual:pwa-register';
   import { App } from './lib/app.svelte';
   import { t } from './lib/i18n';
+  import AdminPage from './components/AdminPage.svelte';
   import Home from './components/Home.svelte';
   import Login from './components/Login.svelte';
   import Quiz from './components/Quiz.svelte';
@@ -46,5 +47,7 @@
     <Quiz {app} />
   {:else if app.view === 'summary'}
     <Summary {app} />
+  {:else if app.view === 'admin'}
+    <AdminPage {app} />
   {/if}
 </main>
