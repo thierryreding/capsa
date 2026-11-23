@@ -59,7 +59,7 @@ Create the first admin (parent) account, then manage accounts with the CLI or th
 
 ```sh
 deploy/local/pod.sh capsa user add papa --admin     # asks for the password
-deploy/local/pod.sh capsa user add lena
+deploy/local/pod.sh capsa user add lena --display-name Lena   # name for greetings, optional
 deploy/local/pod.sh capsa user grant lena demo-latin
 deploy/local/pod.sh capsa user list
 ```

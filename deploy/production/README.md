@@ -34,7 +34,7 @@ start). Then create the first admin (parent) account and the learners:
 
 ```sh
 podman exec -it capsa-api capsa user add papa --admin    # asks for the password
-podman exec -it capsa-api capsa user add lena
+podman exec -it capsa-api capsa user add lena --display-name Lena   # optional
 podman exec -it capsa-api capsa user grant lena demo-latin
 ```
 
