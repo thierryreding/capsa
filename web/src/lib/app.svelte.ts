@@ -50,7 +50,7 @@ export const DISPLAY_NAME = 'display_name';
 
 export type View = 'loading' | 'login' | 'home' | 'quiz' | 'summary' | 'admin';
 export type DirectionChoice = Direction | 'mixed';
-export type QuizMode = Extract<Mode, 'typed' | 'flashcard'>;
+export type QuizMode = Extract<Mode, 'typed' | 'flashcard' | 'choice'>;
 
 export interface Prefs {
   units: string[] | null; // null: all units

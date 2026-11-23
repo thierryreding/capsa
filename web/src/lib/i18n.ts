@@ -30,6 +30,8 @@ const de = {
   'home.mode': 'Abfrage',
   'home.mode.typed': 'Eintippen',
   'home.mode.flashcard': 'Karteikarte',
+  'home.mode.choice': 'Multiple Choice',
+  'quiz.options': 'Antwortmöglichkeiten',
   'home.direction': 'Richtung',
   'home.direction.mixed': 'Gemischt',
   'home.selection': 'Auswahl',

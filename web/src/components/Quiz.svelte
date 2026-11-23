@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { App } from '../lib/app.svelte';
   import { hasExtras, matchContext, prompt, solution } from '../lib/learning/cards';
+  import { choicesFor, type Choice } from '../lib/learning/choice';
   import { checkAnswer, type Verdict } from '../lib/learning/match';
   import { t } from '../lib/i18n';
   import InfoPanel from './InfoPanel.svelte';
@@ -22,7 +23,10 @@
   let showInfo = $state(false);
   let shownAt = Date.now();
   let responseMs: number | null = null;
+  let options = $state<Choice[]>([]);
+  let chosen = $state<number | null>(null);
   let input: HTMLInputElement | undefined = $state();
+  let optionList: HTMLOListElement | undefined = $state();
   let next: HTMLButtonElement | undefined = $state();
 
   // Reset for every new card.
@@ -34,7 +38,15 @@
     showInfo = false;
     shownAt = Date.now();
     responseMs = null;
-    queueMicrotask(() => input?.focus());
+    chosen = null;
+    // Options are drawn once per card, so they stay put while answering.
+    const index = app.index;
+    const current = app.session?.queue[0];
+    options =
+      app.prefs.mode === 'choice' && index && current
+        ? choicesFor(index, current.entryId, current.direction, app.lang)
+        : [];
+    queueMicrotask(() => (input ?? optionList?.querySelector('button'))?.focus());
   });
 
   $effect(() => {
@@ -48,6 +60,20 @@
     verdict = checkAnswer(entry, typed, matchContext(doc, card.direction, app.lang)).verdict;
   }
 
+  function choose(i: number) {
+    if (chosen !== null || !options[i]) return;
+    responseMs = Date.now() - shownAt;
+    chosen = i;
+    verdict = options[i].correct ? 'correct' : 'wrong';
+  }
+
+  /** Number keys 1-4 pick an option. */
+  function onkeydown(event: KeyboardEvent) {
+    if (app.prefs.mode !== 'choice' || chosen !== null || showInfo) return;
+    const n = Number(event.key);
+    if (Number.isInteger(n) && n >= 1 && n <= options.length) choose(n - 1);
+  }
+
   function reveal() {
     responseMs = Date.now() - shownAt;
     revealed = true;
@@ -57,6 +83,8 @@
     void app.answer(correct, responseMs);
   }
 </script>
+
+<svelte:window {onkeydown} />
 
 {#if card && entry && doc}
   <header class="bar-top">
@@ -95,6 +123,25 @@
           <button class="primary">{t('quiz.check')}</button>
         {/if}
       </form>
+    {:else if app.prefs.mode === 'choice'}
+      <ol class="options-list" aria-label={t('quiz.options')} bind:this={optionList}>
+        {#each options as option, i (option.text)}
+          <li>
+            <button
+              class="option"
+              class:right={chosen !== null && option.correct}
+              class:wrong={chosen === i && !option.correct}
+              disabled={chosen !== null}
+              aria-pressed={chosen === i}
+              onclick={() => choose(i)}
+              lang={card.direction === 'src_to_tr' ? app.lang : doc.profile.source_lang}
+            >
+              <span class="key" aria-hidden="true">{i + 1}</span>
+              {option.text}
+            </button>
+          </li>
+        {/each}
+      </ol>
     {:else if !revealed}
       <button class="primary big" onclick={reveal}>{t('quiz.reveal')}</button>
     {/if}
@@ -104,10 +151,13 @@
         {#if verdict === 'correct'}<p class="verdict">{t('quiz.correct')}</p>{/if}
         {#if verdict === 'almost'}<p class="verdict">{t('quiz.almost')}</p>{/if}
         {#if verdict === 'wrong'}<p class="verdict">{t('quiz.wrong')}</p>{/if}
-        <p class="solution">
-          {solution(entry, card.direction, app.lang)}
-          {#if card.direction === 'tr_to_src' && entry.info}<small>{entry.info}</small>{/if}
-        </p>
+        {#if app.prefs.mode !== 'choice'}
+          <!-- in multiple choice the right option is already marked -->
+          <p class="solution">
+            {solution(entry, card.direction, app.lang)}
+            {#if card.direction === 'tr_to_src' && entry.info}<small>{entry.info}</small>{/if}
+          </p>
+        {/if}
       </div>
 
       <div class="actions">
