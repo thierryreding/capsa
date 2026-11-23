@@ -187,7 +187,7 @@ Use in a school requires clarification with the publishers (licence for the cont
 3. **M2 Local frontend:** login, load profile, flashcards and typed answers, Leitner state in IndexedDB, info icon.
 4. **M3 Sync:** event upload and download, settings, tests with two simulated devices.
 5. **M4 Offline and deployment:** service worker, installability, Docker Compose, HTTPS, iOS hint, backup.
-6. **M5 Comfort:** parent mode, multiple choice, test-date planning, statistics per unit, user profile with a display name that the app greets with (done: a synced setting, set by the user, changeable by admins), admin page in the web app (done: create accounts, release profiles, set display names, reset passwords, disable accounts from a phone or browser, using the `/admin/users` API; the CLI stays for bootstrapping the first admin).
+6. **M5 Comfort:** parent mode, multiple choice (done: options from the same word class and nearby units, never a second right answer; a right choice counts like any answer), test-date planning, statistics per unit, user profile with a display name that the app greets with (done: a synced setting, set by the user, changeable by admins), admin page in the web app (done: create accounts, release profiles, set display names, reset passwords, disable accounts from a phone or browser, using the `/admin/users` API; the CLI stays for bootstrapping the first admin).
 
 ## 13. Open points
 
