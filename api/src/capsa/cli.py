@@ -16,6 +16,7 @@ from sqlalchemy import Connection
 from capsa import accounts, migrate
 from capsa.accounts import AccountError
 from capsa.app import create_app
+from capsa.backup import BackupError, backup
 from capsa.clock import now_ms
 from capsa.config import Settings
 from capsa.csv_import import CsvImportError, ProfileMeta, rows_to_profile
@@ -184,6 +185,20 @@ def upgrade(database_url: str) -> None:
     """Apply all pending migrations."""
     migrate.upgrade(database_url)
     click.echo("database is up to date")
+
+
+@db.command("backup")
+@click.argument("directory", type=click.Path(file_okay=False, path_type=Path))
+@click.option("--keep", default=14, show_default=True, help="Number of copies to keep.")
+@database_option
+def db_backup(directory: Path, keep: int, database_url: str) -> None:
+    """Write a consistent copy of the database into DIRECTORY (safe while running)."""
+    try:
+        target = backup(database_url, directory, keep)
+    except BackupError as exc:
+        err(f"error: {exc}")
+        fail()
+    click.echo(f"backup written to {target}")
 
 
 # --- accounts ---------------------------------------------------------------
