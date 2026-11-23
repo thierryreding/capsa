@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
+import json
 import re
-import unicodedata
 import uuid
 from dataclasses import dataclass
 from typing import Literal
 
-from sqlalchemy import Connection, delete, insert, select, update
+from sqlalchemy import Connection, Select, and_, delete, insert, select, update
 from sqlalchemy.exc import IntegrityError
 
-from capsa.db import profile_grants, users
+from capsa import user_settings as settings
+from capsa.db import profile_grants, user_settings, users
 from capsa.passwords import Passwords
 
 Role = Literal["admin", "learner"]
@@ -38,26 +39,31 @@ class User:
         return self.role == "admin"
 
 
+def _users() -> Select:
+    """Users with their display name, which is a synced setting (see user_settings)."""
+    name = user_settings.c.value.label("display_name_json")
+    return select(users, name).select_from(
+        users.outerjoin(
+            user_settings,
+            and_(
+                user_settings.c.user_id == users.c.id,
+                user_settings.c.key == settings.DISPLAY_NAME,
+            ),
+        )
+    )
+
+
 def _user(row) -> User:
-    return User(row.id, row.username, row.role, row.disabled, row.created_at, row.display_name)
-
-
-DISPLAY_NAME_MAX = 64
+    name = json.loads(row.display_name_json) if row.display_name_json else None
+    return User(row.id, row.username, row.role, row.disabled, row.created_at, name)
 
 
 def normalize_display_name(name: str | None) -> str | None:
-    """A display name is free text shown in greetings: trimmed, 1-64 characters, no
-    control characters. Empty or None clears it (the username is shown instead)."""
-    if name is None:
-        return None
-    name = name.strip()
-    if not name:
-        return None
-    if len(name) > DISPLAY_NAME_MAX:
-        raise AccountError(f"display name: at most {DISPLAY_NAME_MAX} characters")
-    if any(unicodedata.category(c) == "Cc" for c in name):
-        raise AccountError("display name: no control characters")
-    return name
+    """See user_settings.normalize_display_name; raises AccountError."""
+    try:
+        return settings.normalize_display_name(name)
+    except settings.SettingError as exc:
+        raise AccountError(str(exc)) from None
 
 
 def username_key(username: str) -> str:
@@ -93,7 +99,6 @@ def create_user(
                     username_key=username_key(username),
                     role=role,
                     password_hash=password_hash,
-                    display_name=display_name,
                     disabled=False,
                     created_at=now,
                     updated_at=now,
@@ -101,25 +106,32 @@ def create_user(
             )
     except IntegrityError:
         raise AccountError(f"username {username!r} is taken") from None
+    if display_name is not None:
+        settings.write(conn, user_id, settings.DISPLAY_NAME, display_name, now)
     return User(user_id, username, role, False, now, display_name)
 
 
 def set_display_name(conn: Connection, user_id: str, name: str | None, now: int) -> str | None:
-    """Set (or clear, with None/empty) the display name; returns the stored value."""
+    """Set (or clear, with None/empty) the display name on behalf of an admin; returns it.
+
+    An admin's change always wins over the stored value: it is written at the server
+    time, or just after the stored change if a device clock was ahead. Later changes
+    from devices win again, as for every setting.
+    """
     name = normalize_display_name(name)
-    conn.execute(
-        update(users).where(users.c.id == user_id).values(display_name=name, updated_at=now)
-    )
-    return name
+    current = settings.get(conn, user_id, settings.DISPLAY_NAME)
+    at = max(now, current.updated_at + 1) if current else now
+    winner = settings.write(conn, user_id, settings.DISPLAY_NAME, name, at)
+    return json.loads(winner.value)
 
 
 def get_user(conn: Connection, user_id: str) -> User | None:
-    row = conn.execute(select(users).where(users.c.id == user_id)).first()
+    row = conn.execute(_users().where(users.c.id == user_id)).first()
     return _user(row) if row else None
 
 
 def find_user(conn: Connection, username: str) -> User | None:
-    row = conn.execute(select(users).where(users.c.username_key == username_key(username))).first()
+    row = conn.execute(_users().where(users.c.username_key == username_key(username))).first()
     return _user(row) if row else None
 
 
@@ -131,7 +143,7 @@ def require_user(conn: Connection, username: str) -> User:
 
 
 def list_users(conn: Connection) -> list[User]:
-    rows = conn.execute(select(users).order_by(users.c.username_key))
+    rows = conn.execute(_users().order_by(users.c.username_key))
     return [_user(r) for r in rows]
 
 

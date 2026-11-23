@@ -23,14 +23,26 @@ test('learners choose the name the app greets them with', async ({ page, context
   await expect(page.getByRole('alert')).toContainText('höchstens 64 Zeichen');
   await page.getByRole('button', { name: 'Abbrechen' }).click();
 
-  // Offline: a clear message; the cached name still shows on an offline start.
+  // Offline: the change is kept on the device and synced later.
   await page.evaluate(() => navigator.serviceWorker.ready);
   await context.setOffline(true);
   await page.getByRole('button', { name: 'Hallo Lena!' }).click();
   await page.getByLabel('Wie sollen wir dich nennen?').fill('Lenchen');
   await page.getByRole('button', { name: 'Speichern' }).click();
-  await expect(page.getByRole('alert')).toContainText('nur mit Internetverbindung');
+  await expect(page.getByRole('button', { name: 'Hallo Lenchen!' })).toBeVisible();
   await page.reload();
+  await expect(page.getByRole('button', { name: 'Hallo Lenchen!' })).toBeVisible();
+  await context.setOffline(false);
+  await page.evaluate(() => window.dispatchEvent(new Event('online')));
+  await expect(page.locator('footer.sync')).toContainText('Zuletzt synchronisiert');
+
+  // Another device gets the new name.
+  const other = await (await page.context().browser()!.newContext(test.info().project.use)).newPage();
+  await login(other, kid, 'Lenchen');
+  await other.context().close();
+  await page.getByRole('button', { name: 'Hallo Lenchen!' }).click();
+  await page.getByLabel('Wie sollen wir dich nennen?').fill('Lena');
+  await page.getByRole('button', { name: 'Speichern' }).click();
   await expect(page.getByRole('button', { name: 'Hallo Lena!' })).toBeVisible();
 
   // Empty clears it: back to the username.

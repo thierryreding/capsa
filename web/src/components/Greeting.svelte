@@ -26,10 +26,9 @@
       return;
     }
     busy = true;
-    const problem = await app.setDisplayName(name);
+    await app.setDisplayName(name);
     busy = false;
-    if (problem === null) editing = false;
-    else error = t(problem === 'offline' ? 'name.offline' : 'name.invalid');
+    editing = false;
   }
 </script>
 

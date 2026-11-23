@@ -22,7 +22,6 @@ const de = {
   'name.save': 'Speichern',
   'name.cancel': 'Abbrechen',
   'name.invalid': 'Der Name darf höchstens 64 Zeichen lang sein und keine Steuerzeichen enthalten.',
-  'name.offline': 'Den Namen kannst du nur mit Internetverbindung ändern.',
   'home.noProfiles': 'Dir wurden noch keine Vokabeln freigegeben. Frag deine Eltern.',
   'home.profile': 'Buch',
   'home.units': 'Lektionen',

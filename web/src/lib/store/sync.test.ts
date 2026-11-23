@@ -27,7 +27,11 @@ class FakeServer {
         return new Response('{"detail":"boom"}', { status: 500 });
       }
       const body = req.method === 'GET' ? null : await req.json();
-      return Response.json(this.handle(req.method, url, body));
+      const result = this.handle(req.method, url, body) as { __status?: number };
+      if (result && typeof result === 'object' && result.__status) {
+        return Response.json(result, { status: result.__status });
+      }
+      return Response.json(result);
     };
     return createApiClient({ baseUrl: 'https://capsa.test', fetch: fetch as typeof globalThis.fetch });
   }
@@ -67,6 +71,9 @@ class FakeServer {
       return [...this.settings].map(([key, s]) => ({ key, ...s }));
     }
     const key = path.split('/').pop()!;
+    if (key === 'display_name' && typeof body.value === 'string' && body.value.length > 64) {
+      return { __status: 400, detail: 'display name: at most 64 characters' };
+    }
     const current = this.settings.get(key);
     if (!current || Date.parse(body.updated_at) > Date.parse(current.updated_at)) {
       this.settings.set(key, { value: body.value, updated_at: body.updated_at });
@@ -225,5 +232,31 @@ describe('settings', () => {
         dirty: false,
       });
     }
+  });
+});
+
+describe('refused settings', () => {
+  it('a value the server refuses is replaced by the server value, not retried', async () => {
+    const server = new FakeServer();
+    const db = device();
+    await setSetting(db, 'display_name', 'Lena', 1000);
+    await syncAll(server.client(), db);
+    await setSetting(db, 'display_name', 'x'.repeat(65), 2000);
+    await setSetting(db, 'units', ['u1'], 2000);
+    await syncAll(server.client(), db); // does not throw
+    const settings = await localSettings(db);
+    expect(settings.display_name).toEqual({ value: 'Lena', updatedAt: 1000, dirty: false });
+    expect(settings.units.dirty).toBe(false); // the other setting still went through
+    server.requests.length = 0;
+    await syncAll(server.client(), db);
+    expect(server.requests.some((r) => r.startsWith('PUT'))).toBe(false);
+  });
+
+  it('a refused value unknown to the server is dropped', async () => {
+    const server = new FakeServer();
+    const db = device();
+    await setSetting(db, 'display_name', 'x'.repeat(65), 1000);
+    await syncAll(server.client(), db);
+    expect((await localSettings(db)).display_name).toBeUndefined();
   });
 });

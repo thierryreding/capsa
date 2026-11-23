@@ -45,6 +45,9 @@ import {
   unsyncedCount,
 } from './store/sync';
 
+/** Setting key of the display name (validated by the server). */
+export const DISPLAY_NAME = 'display_name';
+
 export type View = 'loading' | 'login' | 'home' | 'quiz' | 'summary';
 export type DirectionChoice = Direction | 'mixed';
 export type QuizMode = Extract<Mode, 'typed' | 'flashcard'>;
@@ -152,22 +155,25 @@ export class App {
    * Change the own display name (null clears it). Needs the server; returns null on
    * success, otherwise 'invalid' or 'offline'.
    */
-  async setDisplayName(name: string | null): Promise<null | 'invalid' | 'offline'> {
-    try {
-      const r = await this.api.PATCH('/api/v1/me', { body: { display_name: name } });
-      if (r.response.status === 401) {
-        await this.#expired();
-        return 'offline';
-      }
-      if (!r.data) return 'invalid';
-      this.me = r.data;
-      await setLastUser(r.data); // so the name also shows on an offline start
-      return null;
-    } catch {
-      this.online = false;
-      return 'offline';
-    }
+  /** Change the own display name: a synced setting, so it also works offline. */
+  async setDisplayName(name: string | null): Promise<void> {
+    if (!this.#db || !this.me) return;
+    await setSetting(this.#db, DISPLAY_NAME, name);
+    this.me = { ...this.me, display_name: name };
+    await setLastUser($state.snapshot(this.me)); // so the name also shows on an offline start
+    void this.refresh();
   }
+
+  /** Take account settings (the display name) from the merged local settings. */
+  async #applyAccountSettings(db: UserDb): Promise<void> {
+    const setting = (await localSettings(db))[DISPLAY_NAME];
+    if (!setting || !this.me) return;
+    const name = (setting.value as string | null) ?? null;
+    if (name === (this.me.display_name ?? null)) return;
+    this.me = { ...this.me, display_name: name };
+    await setLastUser($state.snapshot(this.me));
+  }
+
 
   async logout(): Promise<void> {
     // Upload pending answers first; otherwise they would wait on this device until
@@ -212,6 +218,7 @@ export class App {
     }
     if (this.#db !== db) return; // signed out meanwhile
     this.#allPrefs = await this.#loadPrefs(db);
+    await this.#applyAccountSettings(db);
     await this.#loadProfiles();
     await this.#loadSyncStatus(db);
   }
@@ -315,6 +322,7 @@ export class App {
     this.me = me;
     void requestPersistentStorage();
     this.#db = new UserDb(me.id);
+    await this.#applyAccountSettings(this.#db);
     this.#allPrefs = await this.#loadPrefs(this.#db);
     await this.#loadProfiles();
     await this.#loadSyncStatus(this.#db);

@@ -72,11 +72,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /**
-         * Update Me
-         * @description Change the own display name.
-         */
-        patch: operations["update_me_api_v1_me_patch"];
+        patch?: never;
         trace?: never;
     };
     "/api/v1/me/password": {
@@ -312,17 +308,9 @@ export interface components {
             role: "admin" | "learner";
             /**
              * Display Name
-             * @description shown in greetings
+             * @description shown in greetings; the synced setting 'display_name'
              */
             display_name?: string | null;
-        };
-        /** MeUpdate */
-        MeUpdate: {
-            /**
-             * Display Name
-             * @description 1-64 characters after trimming; null or empty clears it
-             */
-            display_name: string | null;
         };
         /** PasswordChange */
         PasswordChange: {
@@ -614,46 +602,6 @@ export interface operations {
             };
         };
     };
-    update_me_api_v1_me_patch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["MeUpdate"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Me"];
-                };
-            };
-            /** @description Invalid display name */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     change_password_api_v1_me_password_put: {
         parameters: {
             query?: never;
@@ -911,6 +859,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Setting"];
                 };
+            };
+            /** @description Invalid value for this key */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

@@ -33,12 +33,12 @@ export async function newLearner(request: APIRequestContext): Promise<string> {
   return username;
 }
 
-export async function login(page: Page, username: string) {
+export async function login(page: Page, username: string, greeting: string = username) {
   await page.goto('/');
   await page.getByLabel('Benutzername').fill(username);
   await page.getByLabel('Passwort').fill(PASSWORD);
   await page.getByRole('button', { name: 'Anmelden' }).click();
-  await expect(page.getByText(`Hallo ${username}!`)).toBeVisible();
+  await expect(page.getByText(`Hallo ${greeting}!`)).toBeVisible();
 }
 
 export async function currentEntry(page: Page): Promise<Entry> {

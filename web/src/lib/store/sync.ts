@@ -128,27 +128,40 @@ export async function syncSettings(api: ApiClient, db: UserDb): Promise<number> 
     value: s.value as Json,
     updatedAt: Date.parse(s.updated_at),
   }));
-  const { settings, push } = mergeSettings(await localSettings(db), remote);
+  const local = await localSettings(db);
+  const { settings, push } = mergeSettings(local, remote);
   for (const key of push) {
     const s = settings[key];
-    const winner = check(
-      await api.PUT('/api/v1/settings/{key}', {
-        params: { path: { key } },
-        body: { value: s.value, updated_at: new Date(s.updatedAt).toISOString() },
-      }),
-      `setting ${key}`,
-    );
+    const r = await api.PUT('/api/v1/settings/{key}', {
+      params: { path: { key } },
+      body: { value: s.value, updated_at: new Date(s.updatedAt).toISOString() },
+    });
+    if (isRefused(r.response.status)) {
+      // The server refuses this value (e.g. an invalid display name from an older app
+      // version): take the server's value, or drop ours, instead of retrying forever.
+      const theirs = remote.find((x) => x.key === key);
+      if (theirs) settings[key] = { value: theirs.value, updatedAt: theirs.updatedAt, dirty: false };
+      else delete settings[key];
+      continue;
+    }
+    const winner = check(r, `setting ${key}`);
     settings[key] = { value: winner.value as Json, updatedAt: Date.parse(winner.updated_at), dirty: false };
   }
   // Keep changes made while this sync was running.
   await db.transaction('rw', db.meta, async () => {
     const current = await localSettings(db);
     for (const [key, s] of Object.entries(current)) {
-      if (s.dirty && s.updatedAt > (settings[key]?.updatedAt ?? -1)) settings[key] = s;
+      // Changed during the sync = newer than what this sync started from.
+      if (s.dirty && s.updatedAt > (local[key]?.updatedAt ?? -1)) settings[key] = s;
     }
     await db.setMeta(SETTINGS_KEY, settings);
   });
   return push.length;
+}
+
+/** A client error other than "not signed in": retrying the same request cannot help. */
+function isRefused(status: number): boolean {
+  return status >= 400 && status < 500 && status !== 401 && status !== 429;
 }
 
 /** Full sync: upload, download, settings. Throws on network or server errors. */
