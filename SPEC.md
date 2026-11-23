@@ -112,7 +112,7 @@ Goal: no merge conflicts, full offline functionality.
 - The server stores events idempotently (primary key `id`) and assigns an ascending `server_seq`.
 - The client fetches events from other devices with `since=<last seq>` and merges them into its local store.
 - The **learning state** (box, next due date) is computed deterministically from the events, ordered by `(ts, id)`. The same pure function runs in the client and (for statistics) on the server. This makes all devices converge.
-- Settings are simple key-value pairs with `updated_at` (last-write-wins).
+- Settings are simple key-value pairs with `updated_at` (last-write-wins). They are not events; a device changes them offline and uploads them at the next sync. Keys the server understands are validated; so far only `display_name` (1-64 characters). An admin's change of such a setting is written at server time (or just after the stored change) so it wins over what is stored; later device changes win again. If the server refuses a value, the device takes the server's value instead of retrying.
 - Profiles are refreshed via ETag/`revision` and stored completely in IndexedDB. A profile update never changes IDs, so progress stays valid.
 - Clock skew: the client does not correct `ts`; the server additionally stores `received_at`. The Leitner computation uses `ts`, but if it lies clearly in the future (> 1 day), `received_at` is used instead.
 - Client implementation (M3): upload in batches of 500; accepted and duplicate events are marked synced, rejected ones are marked with their reason and not retried. Download pages by `server_seq` and stores the server copies (which gives own events their `received_at`). Every step is idempotent, an interrupted sync is simply repeated. The learner's choices in the overview (units, mode, direction, language, selection) are the setting `prefs.<profile id>`. Sync runs at start, on returning to the foreground, after a session, on the `online` event and before signing out.
@@ -187,7 +187,7 @@ Use in a school requires clarification with the publishers (licence for the cont
 3. **M2 Local frontend:** login, load profile, flashcards and typed answers, Leitner state in IndexedDB, info icon.
 4. **M3 Sync:** event upload and download, settings, tests with two simulated devices.
 5. **M4 Offline and deployment:** service worker, installability, Docker Compose, HTTPS, iOS hint, backup.
-6. **M5 Comfort:** parent mode, multiple choice, test-date planning, statistics per unit, user profile with a display name that the app greets with (set by the user, changeable by admins), admin page in the web app (create accounts, release profiles, reset passwords, disable accounts from a phone or browser, using the existing `/admin/users` API; the CLI stays for bootstrapping the first admin).
+6. **M5 Comfort:** parent mode, multiple choice, test-date planning, statistics per unit, user profile with a display name that the app greets with (done: a synced setting, set by the user, changeable by admins), admin page in the web app (create accounts, release profiles, reset passwords, disable accounts from a phone or browser, using the existing `/admin/users` API; the CLI stays for bootstrapping the first admin).
 
 ## 13. Open points
 
@@ -197,7 +197,7 @@ Use in a school requires clarification with the publishers (licence for the cont
 - Meaning of the abbreviation "SP" in the book (stored in the profile as `marker: SP`, assumption: factual information).
 - Whether "name all meanings" should become an option.
 - UI language: German first, with all strings kept i18n-ready (assumption, to be confirmed).
-- More profile information per user, e.g. a display name the app greets with (planned for M5).
+- Event growth and snapshots. Measured: about 300 bytes per event in SQLite and 330 bytes as JSON in a sync download; a diligent learner produces about 18,000 events (5-6 MB) a year. Not a concern for a family. When an account passes about 100,000 events, or before any use by schools, add learning-state snapshots: the server keeps the per-card state as of a cutoff date (with a grace period of e.g. 90 days for late offline answers, which are otherwise applied on top of the snapshot), new devices download snapshot plus newer events, and old events can be archived (daily aggregates are enough for charts); then `VACUUM` the SQLite file. `capsa stats` reports accounts over the threshold.
 - Move from SQLite to PostgreSQL at some point (e.g. before any opening for schools, see 11). When: to be decided; until then keep the storage layer portable (see 3).
 
 ## 14. Notes for Claude Code
