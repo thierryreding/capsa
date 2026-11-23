@@ -399,3 +399,24 @@ legend {
   font-size: 0.85rem;
   color: var(--muted);
 }
+
+.greeting {
+  color: var(--muted);
+  text-decoration: none;
+  padding: 0.25rem 0;
+  text-align: left;
+}
+
+.greeting::after {
+  content: ' ✎';
+  font-size: 0.85em;
+}
+
+.name-edit {
+  flex: 1;
+  margin-right: 0.5rem;
+}
+
+.name-edit label {
+  margin-bottom: 0.25rem;
+}

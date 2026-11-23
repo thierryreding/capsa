@@ -4,6 +4,7 @@
   import { askable } from '../lib/learning/cards';
   import { progressByUnit, type Selection } from '../lib/learning/session';
   import { langName, t } from '../lib/i18n';
+  import Greeting from './Greeting.svelte';
   import InstallHint from './InstallHint.svelte';
   import SyncStatus from './SyncStatus.svelte';
   import UnitProgress from './UnitProgress.svelte';
@@ -44,7 +45,7 @@
 </script>
 
 <header class="bar-top">
-  <span>{t('home.hello', { name: app.me?.username ?? '' })}</span>
+  <Greeting {app} />
   <button class="link" onclick={() => app.logout()}>{t('home.logout')}</button>
 </header>
 

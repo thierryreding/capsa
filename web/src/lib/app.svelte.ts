@@ -148,6 +148,27 @@ export class App {
     }
   }
 
+  /**
+   * Change the own display name (null clears it). Needs the server; returns null on
+   * success, otherwise 'invalid' or 'offline'.
+   */
+  async setDisplayName(name: string | null): Promise<null | 'invalid' | 'offline'> {
+    try {
+      const r = await this.api.PATCH('/api/v1/me', { body: { display_name: name } });
+      if (r.response.status === 401) {
+        await this.#expired();
+        return 'offline';
+      }
+      if (!r.data) return 'invalid';
+      this.me = r.data;
+      await setLastUser(r.data); // so the name also shows on an offline start
+      return null;
+    } catch {
+      this.online = false;
+      return 'offline';
+    }
+  }
+
   async logout(): Promise<void> {
     // Upload pending answers first; otherwise they would wait on this device until
     // the same account signs in here again.
