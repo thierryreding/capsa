@@ -4,6 +4,7 @@
   import { askable } from '../lib/learning/cards';
   import { progressByUnit, type Selection } from '../lib/learning/session';
   import { langName, t } from '../lib/i18n';
+  import InstallHint from './InstallHint.svelte';
   import SyncStatus from './SyncStatus.svelte';
   import UnitProgress from './UnitProgress.svelte';
 
@@ -46,6 +47,8 @@
   <span>{t('home.hello', { name: app.me?.username ?? '' })}</span>
   <button class="link" onclick={() => app.logout()}>{t('home.logout')}</button>
 </header>
+
+<InstallHint {app} />
 
 {#if app.updateAvailable}
   <p class="notice" role="status">

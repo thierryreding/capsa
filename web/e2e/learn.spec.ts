@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { devices, expect, test } from '@playwright/test';
 import {
   currentEntry,
   login,
@@ -98,4 +98,18 @@ test('opens without any network after the first visit', async ({ page, context, 
   await expect(page.getByText(/^Offline/)).toBeVisible();
   await page.getByRole('button', { name: /Los geht’s/ }).click();
   await expect(page.getByText('Karte 1 von 10')).toBeVisible();
+});
+
+test('explains installation on an iPhone that runs Capsa in Safari', async ({ browser, request }) => {
+  const kid = await newLearner(request);
+  // The iPhone user agent and screen, in Chromium (the device's own browser type is dropped).
+  const { defaultBrowserType: _, ...iphone } = devices['iPhone 15'];
+  const context = await browser.newContext(iphone);
+  const page = await context.newPage();
+  await login(page, kid);
+  const hint = page.getByRole('note');
+  await expect(hint).toContainText('Zum Home-Bildschirm');
+  await hint.getByRole('button', { name: 'Später' }).click();
+  await expect(hint).toBeHidden();
+  await context.close();
 });

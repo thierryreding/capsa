@@ -63,6 +63,13 @@ const de = {
   'summary.result': '{firstTry} von {cards} Karten auf Anhieb richtig.',
   'summary.home': 'Zur Übersicht',
   'summary.more': 'Noch eine Runde',
+  'install.iosHint': 'Tipp: Installiere Capsa, dann funktioniert es auch ohne Internet.',
+  'install.iosSteps': 'Tippe dazu in Safari auf „Teilen“ und dann auf „Zum Home-Bildschirm“.',
+  'install.iosWarning':
+    'Achtung: Capsa ist nicht installiert und war seit über 5 Tagen nicht mehr verbunden. Safari kann dann deinen Fortschritt löschen.',
+  'install.promptHint': 'Installiere Capsa, dann funktioniert es auch ohne Internet.',
+  'install.button': 'Installieren',
+  'install.later': 'Später',
   'update.available': 'Eine neue Version von Capsa ist da.',
   'update.apply': 'Aktualisieren',
   'sync.running': 'Synchronisiere …',

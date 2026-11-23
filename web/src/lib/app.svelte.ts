@@ -34,6 +34,7 @@ import {
   type Mode,
   type StoredProfile,
 } from './store/db';
+import { requestPersistentStorage } from './platform';
 import { localProfiles, refreshProfiles } from './store/profiles';
 import type { Json } from './store/settings';
 import {
@@ -291,6 +292,7 @@ export class App {
 
   async #enter(me: Me): Promise<void> {
     this.me = me;
+    void requestPersistentStorage();
     this.#db = new UserDb(me.id);
     this.#allPrefs = await this.#loadPrefs(this.#db);
     await this.#loadProfiles();
