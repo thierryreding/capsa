@@ -2,7 +2,7 @@
 
 Capsa is the project name (Latin for a container for scrolls, fitting for a Leitner box). CLI name: `capsa`, repository: `capsa`.
 
-Status: M0 to M3 done, M4 (offline and deployment) next. This document is meant as the working basis for Claude Code.
+Status: M0 to M4 done, M5 (comfort) next. This document is meant as the working basis for Claude Code.
 Attached: `profiles/private/latein-lehrbuch.yaml` (first profile: Latin, "Salve" + units 1-4, 139 entries).
 
 ## 1. Goal
@@ -149,9 +149,9 @@ These rules must be secured with **tests drawn from the real profile** (table ca
 
 ## 9. Deployment (home server)
 
-- Docker Compose: `api` (Uvicorn) container behind the existing **Traefik** reverse proxy on the home server (routing via container labels, Let's Encrypt certificate of the subdomain).
+- Compose (decided: `podman compose`, a move to Quadlet/systemd is possible later): `api` (Uvicorn) and `web` (static files, nginx) containers behind the existing **Traefik** reverse proxy on the home server, discovered via container labels; no published ports. `/api` goes to the API, everything else to the web app. TLS uses the existing wildcard certificate (routers set `tls=true`; an ACME resolver can be added by label). Domain (e.g. `capsa.example.org`), Traefik entrypoint and network, profile folder and an instance name are configuration (`deploy/production/.env`), so the project can be deployed elsewhere.
 - HTTPS is mandatory (service workers). The subdomain resolves to the internal address on the home network (split DNS).
-- Data: SQLite file and profile folder as volumes, nightly backup.
+- Data: SQLite file in a named volume, profile folder as a read-only bind mount. Nightly backup with `capsa db backup` (SQLite online backup API, keeps 14 copies), run by a systemd user timer.
 - **Local test environment:** containers are managed with **podman**. `deploy/local/` defines a pod (`podman kube play`) with Traefik in front of the API, so the proxy setup can be tested on a development machine. It is not the production configuration.
 - **Offline use:** the app is opened once on the home network (or via VPN) and added to the home screen. After that it runs without a network; sync happens the next time a connection is available.
 - iOS: use only as an installed home-screen app, because Safari deletes data of non-installed websites after long periods of inactivity. On start the app shows a warning if it is not running installed and the last sync is more than 5 days ago.
@@ -187,7 +187,7 @@ Use in a school requires clarification with the publishers (licence for the cont
 3. **M2 Local frontend:** login, load profile, flashcards and typed answers, Leitner state in IndexedDB, info icon.
 4. **M3 Sync:** event upload and download, settings, tests with two simulated devices.
 5. **M4 Offline and deployment:** service worker, installability, Docker Compose, HTTPS, iOS hint, backup.
-6. **M5 Comfort:** parent mode, multiple choice, test-date planning, statistics per unit, admin page in the web app (create accounts, release profiles, reset passwords, disable accounts from a phone or browser, using the existing `/admin/users` API; the CLI stays for bootstrapping the first admin).
+6. **M5 Comfort:** parent mode, multiple choice, test-date planning, statistics per unit, user profile with a display name that the app greets with (set by the user, changeable by admins), admin page in the web app (create accounts, release profiles, reset passwords, disable accounts from a phone or browser, using the existing `/admin/users` API; the CLI stays for bootstrapping the first admin).
 
 ## 13. Open points
 
@@ -197,6 +197,7 @@ Use in a school requires clarification with the publishers (licence for the cont
 - Meaning of the abbreviation "SP" in the book (stored in the profile as `marker: SP`, assumption: factual information).
 - Whether "name all meanings" should become an option.
 - UI language: German first, with all strings kept i18n-ready (assumption, to be confirmed).
+- More profile information per user, e.g. a display name the app greets with (planned for M5).
 - Move from SQLite to PostgreSQL at some point (e.g. before any opening for schools, see 11). When: to be decided; until then keep the storage layer portable (see 3).
 
 ## 14. Notes for Claude Code
