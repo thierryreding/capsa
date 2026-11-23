@@ -13,8 +13,19 @@ def run_migrations() -> None:
         _run(connection)
         return
     engine = make_engine(config.get_main_option("sqlalchemy.url"))
-    with engine.begin() as conn:
+    with engine.connect() as conn:
+        sqlite = conn.dialect.name == "sqlite"
+        if sqlite:
+            # SQLite changes tables by rebuilding them (copy, DROP, rename). With foreign
+            # keys enforced, the DROP would cascade and delete sessions, grants, settings
+            # and events. The pragma only works outside a transaction, hence here.
+            conn.exec_driver_sql("PRAGMA foreign_keys=OFF")
         _run(conn)
+        conn.commit()
+        if sqlite:
+            problems = conn.exec_driver_sql("PRAGMA foreign_key_check").all()
+            if problems:
+                raise RuntimeError(f"foreign key violations after migration: {problems[:5]}")
     engine.dispose()
 
 
