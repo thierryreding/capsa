@@ -19,6 +19,7 @@ class UserInfo(BaseModel):
     username: str
     role: Role
     disabled: bool
+    display_name: str | None = None
     profiles: list[str] = Field(description="profiles released to the account")
 
 
@@ -26,6 +27,7 @@ class UserCreate(BaseModel):
     username: str = Field(max_length=64)
     password: str = Field(max_length=MAX_LENGTH)
     role: Role = "learner"
+    display_name: str | None = Field(default=None, max_length=256)
     profiles: list[str] = []
 
 
@@ -33,6 +35,9 @@ class UserUpdate(BaseModel):
     disabled: bool | None = None
     password: str | None = Field(default=None, max_length=MAX_LENGTH, description="reset")
     profiles: list[str] | None = None
+    display_name: str | None = Field(
+        default=None, max_length=256, description="absent: unchanged; null or empty: cleared"
+    )
 
 
 def _info(conn: Connection, user: User) -> UserInfo:
@@ -41,6 +46,7 @@ def _info(conn: Connection, user: User) -> UserInfo:
         username=user.username,
         role=user.role,
         disabled=user.disabled,
+        display_name=user.display_name,
         profiles=sorted(accounts.grants(conn, user.id)),
     )
 
@@ -67,7 +73,13 @@ def create_user(body: UserCreate, admin: Admin, conn: Conn, state: State) -> Use
     now = state.clock()
     try:
         user = accounts.create_user(
-            conn, state.passwords, body.username, body.password, body.role, now
+            conn,
+            state.passwords,
+            body.username,
+            body.password,
+            body.role,
+            now,
+            display_name=body.display_name,
         )
     except (AccountError, PasswordPolicyError) as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from None
@@ -84,6 +96,11 @@ def update_user(user_id: str, body: UserUpdate, admin: Admin, conn: Conn, state:
     if user is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "no such user")
     now = state.clock()
+    if "display_name" in body.model_fields_set:
+        try:
+            accounts.set_display_name(conn, user.id, body.display_name, now)
+        except AccountError as exc:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from None
     if body.profiles is not None:
         accounts.set_grants(conn, user.id, _check_profiles(state, body.profiles), now)
     if body.password is not None:

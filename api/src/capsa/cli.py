@@ -236,15 +236,25 @@ def user() -> None:
 @user.command("add")
 @click.argument("username")
 @click.option("--admin", is_flag=True, help="Create an admin (parent) account.")
+@click.option("--display-name", help="Name the app greets with (default: the username).")
 @password_stdin_option
 @database_option
-def user_add(username: str, admin: bool, password_stdin: bool, database_url: str) -> None:
+def user_add(
+    username: str, admin: bool, display_name: str | None, password_stdin: bool, database_url: str
+) -> None:
     """Create an account (asks for the password)."""
+    try:
+        accounts.normalize_display_name(display_name)  # fail before asking for the password
+    except AccountError as exc:
+        err(f"error: {exc}")
+        fail()
     password = _read_password(password_stdin)
 
     def run(conn: Connection) -> str:
         role = "admin" if admin else "learner"
-        u = accounts.create_user(conn, Passwords(), username, password, role, now_ms())
+        u = accounts.create_user(
+            conn, Passwords(), username, password, role, now_ms(), display_name=display_name
+        )
         return f"created {u.role} {u.username} ({u.id})"
 
     _transaction(database_url, run)
@@ -266,6 +276,23 @@ def user_passwd(username: str, password_stdin: bool, database_url: str) -> None:
     _transaction(database_url, run)
 
 
+@user.command("set-name")
+@click.argument("username")
+@click.argument("name", required=False)
+@database_option
+def user_set_name(username: str, name: str | None, database_url: str) -> None:
+    """Set the display name; without NAME it is cleared (the username is shown)."""
+
+    def run(conn: Connection) -> str:
+        u = accounts.require_user(conn, username)
+        stored = accounts.set_display_name(conn, u.id, name, now_ms())
+        return (
+            f"{u.username}: display name {stored!r}" if stored else f"{u.username}: no display name"
+        )
+
+    _transaction(database_url, run)
+
+
 @user.command("list")
 @database_option
 def user_list(database_url: str) -> None:
@@ -276,7 +303,8 @@ def user_list(database_url: str) -> None:
         for u in accounts.list_users(conn):
             granted = ", ".join(sorted(accounts.grants(conn, u.id))) or "-"
             state = " (disabled)" if u.disabled else ""
-            lines.append(f"{u.username:<20} {u.role:<8} profiles: {granted}{state}")
+            name = f" name: {u.display_name}" if u.display_name else ""
+            lines.append(f"{u.username:<20} {u.role:<8} profiles: {granted}{state}{name}")
         return "\n".join(lines) or "no users"
 
     _transaction(database_url, run)

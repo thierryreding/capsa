@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 import uuid
 from dataclasses import dataclass
 from typing import Literal
@@ -30,6 +31,7 @@ class User:
     role: Role
     disabled: bool
     created_at: int
+    display_name: str | None = None
 
     @property
     def is_admin(self) -> bool:
@@ -37,7 +39,25 @@ class User:
 
 
 def _user(row) -> User:
-    return User(row.id, row.username, row.role, row.disabled, row.created_at)
+    return User(row.id, row.username, row.role, row.disabled, row.created_at, row.display_name)
+
+
+DISPLAY_NAME_MAX = 64
+
+
+def normalize_display_name(name: str | None) -> str | None:
+    """A display name is free text shown in greetings: trimmed, 1-64 characters, no
+    control characters. Empty or None clears it (the username is shown instead)."""
+    if name is None:
+        return None
+    name = name.strip()
+    if not name:
+        return None
+    if len(name) > DISPLAY_NAME_MAX:
+        raise AccountError(f"display name: at most {DISPLAY_NAME_MAX} characters")
+    if any(unicodedata.category(c) == "Cc" for c in name):
+        raise AccountError("display name: no control characters")
+    return name
 
 
 def username_key(username: str) -> str:
@@ -56,8 +76,10 @@ def create_user(
     password: str,
     role: Role,
     now: int,
+    display_name: str | None = None,
 ) -> User:
     check_username(username)
+    display_name = normalize_display_name(display_name)
     if role not in ROLES:
         raise AccountError(f"unknown role {role!r}")
     password_hash = passwords.hash(password)
@@ -71,6 +93,7 @@ def create_user(
                     username_key=username_key(username),
                     role=role,
                     password_hash=password_hash,
+                    display_name=display_name,
                     disabled=False,
                     created_at=now,
                     updated_at=now,
@@ -78,7 +101,16 @@ def create_user(
             )
     except IntegrityError:
         raise AccountError(f"username {username!r} is taken") from None
-    return User(user_id, username, role, False, now)
+    return User(user_id, username, role, False, now, display_name)
+
+
+def set_display_name(conn: Connection, user_id: str, name: str | None, now: int) -> str | None:
+    """Set (or clear, with None/empty) the display name; returns the stored value."""
+    name = normalize_display_name(name)
+    conn.execute(
+        update(users).where(users.c.id == user_id).values(display_name=name, updated_at=now)
+    )
+    return name
 
 
 def get_user(conn: Connection, user_id: str) -> User | None:

@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
 
 from capsa import accounts, sessions
-from capsa.accounts import Role, User
+from capsa.accounts import AccountError, Role, User
 from capsa.deps import (
     SESSION_COOKIE,
     Conn,
@@ -26,10 +26,19 @@ class Me(BaseModel):
     id: str
     username: str
     role: Role
+    display_name: str | None = Field(default=None, description="shown in greetings")
 
     @classmethod
     def of(cls, user: User) -> Me:
-        return cls(id=user.id, username=user.username, role=user.role)
+        return cls(
+            id=user.id, username=user.username, role=user.role, display_name=user.display_name
+        )
+
+
+class MeUpdate(BaseModel):
+    display_name: str | None = Field(
+        max_length=256, description="1-64 characters after trimming; null or empty clears it"
+    )
 
 
 class LoginRequest(BaseModel):
@@ -82,6 +91,16 @@ def logout(request: Request, response: Response, conn: Conn, state: State) -> No
 @router.get("/me")
 def me(user: CurrentUser) -> Me:
     return Me.of(user)
+
+
+@router.patch("/me", responses={400: {"description": "Invalid display name"}})
+def update_me(body: MeUpdate, user: CurrentUser, conn: Conn, state: State) -> Me:
+    """Change the own display name."""
+    try:
+        accounts.set_display_name(conn, user.id, body.display_name, state.clock())
+    except AccountError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from None
+    return Me.of(accounts.get_user(conn, user.id) or user)
 
 
 @router.put(

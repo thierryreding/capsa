@@ -46,6 +46,8 @@ users = Table(
     Column("username_key", String(64), nullable=False, unique=True),
     Column("role", String(16), nullable=False),  # admin | learner
     Column("password_hash", Text, nullable=False),
+    # Free text for greetings; null: the username is shown.
+    Column("display_name", String(64), nullable=True),
     Column("disabled", Boolean, nullable=False, default=False),
     Column("created_at", BigInteger, nullable=False),
     Column("updated_at", BigInteger, nullable=False),

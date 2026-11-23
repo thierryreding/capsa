@@ -72,7 +72,11 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Update Me
+         * @description Change the own display name.
+         */
+        patch: operations["update_me_api_v1_me_patch"];
         trace?: never;
     };
     "/api/v1/me/password": {
@@ -306,6 +310,19 @@ export interface components {
              * @enum {string}
              */
             role: "admin" | "learner";
+            /**
+             * Display Name
+             * @description shown in greetings
+             */
+            display_name?: string | null;
+        };
+        /** MeUpdate */
+        MeUpdate: {
+            /**
+             * Display Name
+             * @description 1-64 characters after trimming; null or empty clears it
+             */
+            display_name: string | null;
         };
         /** PasswordChange */
         PasswordChange: {
@@ -424,6 +441,8 @@ export interface components {
              * @enum {string}
              */
             role: "admin" | "learner";
+            /** Display Name */
+            display_name?: string | null;
             /**
              * Profiles
              * @default []
@@ -443,6 +462,8 @@ export interface components {
             role: "admin" | "learner";
             /** Disabled */
             disabled: boolean;
+            /** Display Name */
+            display_name?: string | null;
             /**
              * Profiles
              * @description profiles released to the account
@@ -460,6 +481,11 @@ export interface components {
             password?: string | null;
             /** Profiles */
             profiles?: string[] | null;
+            /**
+             * Display Name
+             * @description absent: unchanged; null or empty: cleared
+             */
+            display_name?: string | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -584,6 +610,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Me"];
+                };
+            };
+        };
+    };
+    update_me_api_v1_me_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Me"];
+                };
+            };
+            /** @description Invalid display name */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

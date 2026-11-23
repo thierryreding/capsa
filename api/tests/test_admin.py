@@ -26,7 +26,7 @@ def test_create_and_list(papa, api):
     created = r.json()
     assert created | {"id": "-"} == {
         "id": "-", "username": "Lena", "role": "learner", "disabled": False,
-        "profiles": ["demo-latin"],
+        "display_name": None, "profiles": ["demo-latin"],
     }  # fmt: skip
     assert [u["username"] for u in papa.get(URL).json()] == ["Lena", "papa"]
     lena = api.login("lena")
