@@ -33,6 +33,25 @@ For a local try-out, `tool/dev_server.py` serves the API and `build/web` togethe
 From the Android emulator the same server is `http://10.0.2.2:8092` (debug builds
 allow plain HTTP; start the server with `--host 0.0.0.0`).
 
+## Android release
+
+    tool/build.sh apk --release --split-per-abi \
+      --dart-define=CAPSA_SERVER=https://capsa.example.org   # optional: prefill the server
+
+`build.sh` takes the version name from `../VERSION` and derives the version code
+(`2026.11.1` → 20261101; split APKs add 1000 × ABI, e.g. +3000 for arm64), so every
+release can update the installed one. Phones only need `app-arm64-v8a-release.apk`.
+
+Release builds are signed with the upload key named in `android/key.properties`
+(keystore path, alias, passwords; not in Git). Without that file they fall back to the
+debug key and Gradle warns. Android only installs an update signed with the same key as
+the installed app, so **back up the keystore and `key.properties` together**: without
+them, the app can only be replaced by uninstalling it, which deletes the data on the
+device that has not been synced yet. A new key is made with:
+
+    keytool -genkeypair -keystore upload-keystore.jks -storetype PKCS12 -alias upload \
+      -keyalg RSA -keysize 4096 -validity 10000 -dname "CN=Capsa"
+
 ## Differences from the PWA
 
 - Offline on the web: Flutter no longer ships a working service worker (its
