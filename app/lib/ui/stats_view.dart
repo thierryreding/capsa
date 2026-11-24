@@ -241,6 +241,7 @@ class _Stack extends StatelessWidget {
       child: SizedBox(
         height: h < 1 && total > 0 ? 1 : h,
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (day.wrong > 0)
               Expanded(

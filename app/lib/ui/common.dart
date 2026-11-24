@@ -136,7 +136,11 @@ class SegmentBar extends StatelessWidget {
       borderRadius: BorderRadius.circular(height / 2),
       child: SizedBox(
         height: height,
+        // Stretch, or childless ColoredBoxes would be zero pixels high; the gap
+        // separates segments as in the PWA.
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: 2,
           children: [
             for (final (count, color) in parts)
               Expanded(
@@ -225,13 +229,26 @@ class _SyncStatusState extends State<SyncStatus> {
           ].join(' · ');
     return Semantics(
       liveRegion: true,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: CapsaColors.of(context).border)),
+        ),
+        padding: const EdgeInsets.fromLTRB(16, 2, 8, 2),
         child: Row(
           children: [
-            Expanded(child: Hint(status)),
-            if (!app.syncing) TextButton(onPressed: app.refresh, child: Text(t('sync.now'))),
-            Hint('Capsa $appVersion'),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [Hint(status), Hint('Capsa $appVersion')],
+              ),
+            ),
+            if (!app.syncing)
+              IconButton(
+                onPressed: app.refresh,
+                tooltip: t('sync.now'),
+                icon: const Icon(Icons.sync),
+              ),
           ],
         ),
       ),
