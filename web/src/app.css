@@ -412,6 +412,11 @@ legend {
   color: var(--muted);
 }
 
+.sync .version {
+  flex-basis: 100%;
+  font-size: 0.75rem;
+}
+
 .greeting {
   color: var(--muted);
   text-decoration: none;

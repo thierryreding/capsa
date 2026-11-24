@@ -1,12 +1,14 @@
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
+import pkg from './package.json' with { type: 'json' };
 
 // During development the API runs in the local pod (deploy/local/pod.sh up);
 // /api is proxied so that app and API share one origin, as in production.
 const api = process.env.CAPSA_API ?? 'http://capsa.localhost:8080';
 
 export default defineConfig({
+  define: { __APP_VERSION__: JSON.stringify(pkg.version) },
   plugins: [
     svelte(),
     VitePWA({

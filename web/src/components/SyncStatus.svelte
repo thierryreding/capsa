@@ -24,4 +24,5 @@
     </span>
     <button class="link" onclick={() => app.refresh()}>{t('sync.now')}</button>
   {/if}
+  <span class="version">Capsa {__APP_VERSION__}</span>
 </footer>
