@@ -41,6 +41,30 @@ podman exec -it capsa-api capsa user grant lena demo-latin
 With a different `CAPSA_INSTANCE`, the containers are called `<instance>-api` and
 `<instance>-web`.
 
+## In a separate service folder
+
+`compose.yaml` does not have to stay in the repository. To keep the configuration with
+other services (say, one folder per service in a versioned `/etc`-style repository),
+copy `compose.yaml` and `.env.example` into that folder and point `CAPSA_SOURCE` at a
+Capsa checkout on the server:
+
+```sh
+git clone https://git.example.org/capsa.git /srv/src/capsa
+git -C /srv/src/capsa checkout v2026.11
+
+mkdir capsa && cd capsa            # the service folder
+cp /srv/src/capsa/deploy/production/compose.yaml .
+cp /srv/src/capsa/deploy/production/.env.example .env
+# .env: CAPSA_DOMAIN, CAPSA_VERSION=2026.11, CAPSA_SOURCE=/srv/src/capsa
+mkdir profiles                     # see Profiles below
+podman compose up -d
+```
+
+With `CAPSA_VERSION` set, a plain `podman compose up -d` builds the images when no
+image with that tag exists yet, so start scripts that never pass `--build` keep working.
+If that folder is versioned, keep profiles with book content out of it (ignore
+`profiles/`, or set `CAPSA_PROFILE_DIR` to a folder outside).
+
 ## Profiles
 
 The profile folder is mounted read-only. Copy a new or changed YAML file into it and
@@ -56,6 +80,11 @@ git pull
 podman compose up -d --build
 ```
 
+In a separate service folder: check out the new release tag in the `CAPSA_SOURCE`
+checkout, set `CAPSA_VERSION` to it, then `podman compose up -d` (which builds the new
+images, since that tag does not exist yet). Compare `compose.yaml` with the one in the
+checkout (`diff`) in case a release changed it.
+
 Database migrations run automatically when the API container starts. Learners get the
 new app version offered in the app ("Neue Version verfügbar").
 
@@ -70,7 +99,9 @@ learning-state snapshots become worthwhile (SPEC 13).
 
 `capsa db backup` writes a consistent copy of the database (safe while the app is
 running) to `/data/backups` in the data volume and keeps the newest 14. To run it
-nightly as a systemd user service next to rootless podman:
+nightly as a systemd user service next to rootless podman (with rootful podman, i.e.
+`sudo podman compose`, install the two files into `/etc/systemd/system/` instead and
+use `sudo systemctl` without `--user`; lingering is not needed):
 
 ```sh
 mkdir -p ~/.config/systemd/user
