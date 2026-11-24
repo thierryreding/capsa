@@ -8,4 +8,7 @@ cd "$(dirname "$0")/.."
 target=${1:?usage: $0 web|apk|appbundle|ios [flutter build options]}
 shift
 version=$(cat ../VERSION)
-exec flutter build "$target" --dart-define=CAPSA_VERSION="$version" "$@"
+# Android needs an increasing integer: YYYY.MM[.N] -> YYYYMM0N (2026.11.1 -> 20261101).
+code=$(echo "$version" | awk -F. '{ printf "%d%02d%02d", $1, $2, $3 }')
+exec flutter build "$target" --dart-define=CAPSA_VERSION="$version" \
+  --build-name="$version" --build-number="$code" "$@"
