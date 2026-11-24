@@ -24,6 +24,10 @@ class _QuizPageState extends State<QuizPage> {
   final _typed = TextEditingController();
   final _inputFocus = FocusNode();
   final _nextFocus = FocusNode();
+
+  /// Holds the focus in the other modes. On the web, key events only reach Flutter
+  /// while its view has the browser's focus, which leaves with a removed button.
+  final _pageFocus = FocusNode();
   bool _infoOpen = false;
 
   Verdict? _verdict;
@@ -48,6 +52,7 @@ class _QuizPageState extends State<QuizPage> {
     _typed.dispose();
     _inputFocus.dispose();
     _nextFocus.dispose();
+    _pageFocus.dispose();
     HardwareKeyboard.instance.removeHandler(_onKey);
     super.dispose();
   }
@@ -67,11 +72,9 @@ class _QuizPageState extends State<QuizPage> {
     _options = app.prefs.mode == Mode.choice && index != null && card != null
         ? choicesFor(index, card.entryId, card.direction, app.lang)
         : [];
-    if (app.prefs.mode == Mode.typed) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _inputFocus.requestFocus();
-      });
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) (app.prefs.mode == Mode.typed ? _inputFocus : _pageFocus).requestFocus();
+    });
   }
 
   void _focusNext() => WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -295,28 +298,31 @@ class _QuizPageState extends State<QuizPage> {
       ],
     };
 
-    return CapsaPage(
-      app: app,
-      title: Text(t('quiz.of', {'n': position, 'total': total})),
-      actions: [TextButton(onPressed: app.quitSession, child: Text(t('quiz.quit')))],
-      children: [
-        LinearProgressIndicator(value: session.results.length / total),
-        const SizedBox(height: 12),
-        CapsaCard(
-          children: [
-            word,
-            if (repeated) Hint(t('quiz.again')),
-            if (mode == Mode.parent) Hint(t('quiz.parentHint')),
-            const SizedBox(height: 16),
-            ...answer,
-            if (result != null) ...[const SizedBox(height: 12), result],
-            if (actions.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Wrap(spacing: 8, runSpacing: 8, children: actions),
+    return Focus(
+      focusNode: _pageFocus,
+      child: CapsaPage(
+        app: app,
+        title: Text(t('quiz.of', {'n': position, 'total': total})),
+        actions: [TextButton(onPressed: app.quitSession, child: Text(t('quiz.quit')))],
+        children: [
+          LinearProgressIndicator(value: session.results.length / total),
+          const SizedBox(height: 12),
+          CapsaCard(
+            children: [
+              word,
+              if (repeated) Hint(t('quiz.again')),
+              if (mode == Mode.parent) Hint(t('quiz.parentHint')),
+              const SizedBox(height: 16),
+              ...answer,
+              if (result != null) ...[const SizedBox(height: 12), result],
+              if (actions.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Wrap(spacing: 8, runSpacing: 8, children: actions),
+              ],
             ],
-          ],
-        ),
-      ],
+          ),
+        ],
+      ),
     );
   }
 
