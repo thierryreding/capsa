@@ -19,7 +19,7 @@ services:
       # address or network (CIDR) if other containers share the network.
       FORWARDED_ALLOW_IPS: ${CAPSA_TRUSTED_PROXIES:-*}
     volumes:
-      - data:/data
+      - ${CAPSA_DATA_DIR:-data}:/data
       - ${CAPSA_PROFILE_DIR:-./profiles}:/profiles:ro
     networks: [proxy]
     healthcheck:
@@ -59,8 +59,8 @@ services:
       - traefik.http.services.${CAPSA_INSTANCE:-capsa}-web.loadbalancer.server.port=8090
 
 volumes:
-  # The database (and its backups in /data/backups). A named volume, so the container
-  # user can write to it (rootless and rootful podman alike).
+  # The database (and its backups in /data/backups). Used unless CAPSA_DATA_DIR names
+  # a host folder instead; a named volume needs no permission setup.
   data:
 
 networks:

@@ -60,6 +60,27 @@ mkdir profiles                     # see Profiles below
 podman compose up -d
 ```
 
+### Data on a host folder
+
+By default the database lives in the named volume `<instance>_data`. To keep all data
+in one place on the host instead (say, a data disk), set both folders in `.env`:
+
+```sh
+CAPSA_DATA_DIR=/srv/data/capsa/data          # database and /data/backups
+CAPSA_PROFILE_DIR=/srv/data/capsa/profiles   # profile YAML files (read-only)
+```
+
+The API runs as uid 10001 in the container, so with rootful podman:
+
+```sh
+sudo mkdir -p /srv/data/capsa/data /srv/data/capsa/profiles
+sudo chown 10001:10001 /srv/data/capsa/data
+sudo chmod -R a+rX /srv/data/capsa/profiles     # readable is enough
+```
+
+(With rootless podman, use `podman unshare chown 10001:10001 ...` instead; on SELinux
+hosts, label the folders or add `:Z` to the mounts.)
+
 With `CAPSA_VERSION` set, a plain `podman compose up -d` builds the images when no
 image with that tag exists yet, so start scripts that never pass `--build` keep working.
 If that folder is versioned, keep profiles with book content out of it (ignore
@@ -112,10 +133,12 @@ systemctl --user enable --now capsa-backup.timer
 loginctl enable-linger "$USER"    # run timers without being logged in
 ```
 
-The copies live in the volume (`podman volume inspect capsa_data` shows its path);
-include that folder in the server's regular backup.
+The copies live in the volume (`podman volume inspect capsa_data` shows its path) or
+in `$CAPSA_DATA_DIR/backups`; include that folder in the server's regular backup.
 
-To restore: stop the API, replace the database with a backup, start again.
+To restore: stop the API, replace the database with a backup, start again. With
+`CAPSA_DATA_DIR`, copy the files on the host directly (keep the owner, uid 10001);
+with the named volume:
 
 ```sh
 podman stop capsa-api
