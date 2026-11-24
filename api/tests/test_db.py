@@ -67,3 +67,21 @@ def test_table_rebuilds_do_not_cascade(tmp_path):
         counts = [conn.execute(text(f"SELECT count(*) FROM {t}")).scalar() for t in tables]
         assert counts == [1, 1, 1, 1, 1]
     engine.dispose()
+
+
+def test_cli_db_upgrade_explains_unwritable_folder(tmp_path, capsys):
+    folder = tmp_path / "data"
+    folder.mkdir()
+    folder.chmod(0o555)  # like a bind-mount folder created by root
+    try:
+        url = f"sqlite:///{folder / 'capsa.sqlite'}"
+        assert main(["db", "upgrade", "--database-url", url]) == 1
+        assert f"{folder} is not writable" in capsys.readouterr().err
+    finally:
+        folder.chmod(0o755)
+
+
+def test_cli_db_upgrade_explains_missing_folder(tmp_path, capsys):
+    url = f"sqlite:///{tmp_path / 'missing' / 'capsa.sqlite'}"
+    assert main(["db", "upgrade", "--database-url", url]) == 1
+    assert "does not exist" in capsys.readouterr().err

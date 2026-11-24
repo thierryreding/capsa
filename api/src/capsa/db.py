@@ -7,6 +7,8 @@ go through Alembic migrations in capsa/migrations.
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
 from typing import Any
 
 from sqlalchemy import (
@@ -24,6 +26,7 @@ from sqlalchemy import (
     create_engine,
     event,
 )
+from sqlalchemy.engine import make_url
 
 metadata = MetaData(
     naming_convention={
@@ -108,6 +111,28 @@ def _sqlite_pragmas(dbapi_conn: Any, _record: Any) -> None:
     cur.execute("PRAGMA journal_mode=WAL")
     cur.execute("PRAGMA busy_timeout=5000")
     cur.close()
+
+
+def sqlite_access_problem(url: str) -> str | None:
+    """Why a SQLite database at `url` cannot be written, if it cannot (None otherwise).
+
+    SQLite needs to create the file and its -wal/-shm files next to it, so the folder
+    itself must be writable, not just the file. Checked up front, because the error
+    from SQLite ("unable to open database file") does not say which.
+    """
+    parsed = make_url(url)
+    if parsed.get_backend_name() != "sqlite" or parsed.database in (None, "", ":memory:"):
+        return None
+    path = Path(parsed.database).absolute()
+    folder = path.parent
+    who = f"uid {os.getuid()}" if hasattr(os, "getuid") else "this user"
+    if not folder.is_dir():
+        return f"database folder {folder} does not exist"
+    if not os.access(folder, os.W_OK | os.X_OK):
+        return f"database folder {folder} is not writable by {who}"
+    if path.exists() and not os.access(path, os.R_OK | os.W_OK):
+        return f"database file {path} is not readable and writable by {who}"
+    return None
 
 
 def make_engine(url: str) -> Engine:

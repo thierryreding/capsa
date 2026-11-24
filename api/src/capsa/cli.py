@@ -21,7 +21,7 @@ from capsa.backup import BackupError, backup
 from capsa.clock import now_ms, to_datetime
 from capsa.config import Settings
 from capsa.csv_import import CsvImportError, ProfileMeta, rows_to_profile
-from capsa.db import make_engine
+from capsa.db import make_engine, sqlite_access_problem
 from capsa.lint import lint_profile
 from capsa.passwords import PasswordPolicyError, Passwords
 from capsa.profile_io import dump_profile, load_profile
@@ -185,6 +185,9 @@ def db() -> None:
 @database_option
 def upgrade(database_url: str) -> None:
     """Apply all pending migrations."""
+    if problem := sqlite_access_problem(database_url):
+        err(f"error: {problem}")
+        fail()
     migrate.upgrade(database_url)
     click.echo("database is up to date")
 
