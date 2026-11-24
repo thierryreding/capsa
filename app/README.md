@@ -20,7 +20,7 @@ learning state and settings (choices, test plans, display name) are shared.
     cd app
     flutter test                     # logic, sync and widget tests
     tool/build.sh web                # build/web, version from ../VERSION
-    tool/build.sh apk --release      # needs Android SDK 36 and JDK 17+
+    tool/build.sh apk --release      # needs Android SDK 36 and JDK 17-27 (flutter config --jdk-dir)
 
 The web build has to share the API's origin (no CORS, `SameSite=Strict` cookie).
 For a local try-out, `tool/dev_server.py` serves the API and `build/web` together:
