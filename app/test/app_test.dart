@@ -181,6 +181,34 @@ void main() {
     expect(second.online, isTrue);
   });
 
+  testWidgets('flashcards: every card, the last one too, shows its solution first', (tester) async {
+    final h = Harness(FakeServer());
+    final app = await h.launch();
+    await start(tester, app);
+    await signIn(tester);
+    await tapOn(tester, find.text('Karteikarte'));
+    await settle(tester);
+    await tapOn(tester, find.text('Los geht’s (10 Karten)'));
+    await settle(tester);
+
+    // The first card wasn't known, so it comes back as an eleventh, last card.
+    for (var n = 1; n <= 11; n++) {
+      expect(find.text('Karte $n von 11'), n == 1 ? findsNothing : findsOneWidget);
+      final card = app.session!.current!;
+      final right = solution(app.index!.entries[card.entryId]!, card.direction, app.lang);
+      await tapOn(tester, find.widgetWithText(FilledButton, 'Aufdecken'));
+      await settle(tester);
+      expect(find.textContaining('Karte $n von'), findsOneWidget, reason: 'card $n revealed');
+      expect(find.text(right), findsOneWidget);
+      final button = n == 1
+          ? find.widgetWithText(OutlinedButton, 'Nicht gewusst')
+          : find.widgetWithText(FilledButton, 'Gewusst');
+      await tapOn(tester, button);
+      await settle(tester);
+    }
+    expect(find.text('Geschafft!'), findsOneWidget);
+  });
+
   testWidgets('multiple choice marks the right option', (tester) async {
     final h = Harness(FakeServer());
     final app = await h.launch();
