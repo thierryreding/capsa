@@ -52,6 +52,22 @@ device that has not been synced yet. A new key is made with:
     keytool -genkeypair -keystore upload-keystore.jks -storetype PKCS12 -alias upload \
       -keyalg RSA -keysize 4096 -validity 10000 -dname "CN=Capsa"
 
+## CI builds
+
+`.github/workflows/ci.yml` runs `scripts/check.sh`, builds the Android APKs and the
+unsigned iOS app (after starting it in the iPhone simulator), and on a tag `vYYYY.MM[.N]`
+that matches `VERSION` publishes both in a GitHub release. It pins Flutter's master
+revision in `FLUTTER_REVISION`; update it together with the local Flutter.
+
+To sign the APKs with the upload key, add two repository secrets:
+
+    base64 -w0 ~/.local/share/capsa/android/upload-keystore.jks   # ANDROID_KEYSTORE_BASE64
+    grep storePassword android/key.properties                     # ANDROID_KEYSTORE_PASSWORD
+
+The unsigned `.ipa` installs on an iPhone through AltStore or Sideloadly with an Apple
+ID (free accounts: the install expires after 7 days); App Store or TestFlight builds
+need the Apple Developer Program and its certificates.
+
 ## Differences from the PWA
 
 - Offline on the web: Flutter no longer ships a working service worker (its

@@ -1,0 +1,174 @@
+# Checks on every push and pull request; Android and iOS builds as downloadable
+# artifacts; on a tag vYYYY.MM[.N] a GitHub release with the Android APKs and the
+# unsigned iOS app.
+#
+# Secrets (Settings → Secrets and variables → Actions):
+#   ANDROID_KEYSTORE_BASE64    base64 of the upload keystore (app/README.md)
+#   ANDROID_KEYSTORE_PASSWORD  its password (store and key)
+# Without them, Android builds are signed with a throwaway debug key and cannot
+# update an installed release. Optional variable CAPSA_SERVER prefills the server.
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+permissions:
+  contents: read
+
+env:
+  # The app needs Flutter's master channel (Material as the material_ui package);
+  # pinned so a moving master cannot break the build. Update together with app/.
+  FLUTTER_REVISION: 457d49bc600142ecb927f382cf20a728af186ea7
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: master
+          flutter-version: ${{ env.FLUTTER_REVISION }}
+          cache: true
+      - name: Install dependencies
+        run: |
+          uv sync --locked
+          (cd web && npm ci && npx playwright install --with-deps chromium)
+          (cd app && flutter pub get)
+      - run: scripts/check.sh
+      - uses: actions/upload-artifact@v5
+        if: failure()
+        with:
+          name: playwright-traces
+          path: web/test-results/
+          if-no-files-found: ignore
+
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: master
+          flutter-version: ${{ env.FLUTTER_REVISION }}
+          cache: true
+      - name: Signing key
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE" ]; then
+            echo "::warning::No signing key configured; the APKs use a debug key."
+            exit 0
+          fi
+          echo "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/upload-keystore.jks"
+          {
+            echo "storeFile=$RUNNER_TEMP/upload-keystore.jks"
+            echo "storePassword=$PASSWORD"
+            echo "keyPassword=$PASSWORD"
+            echo "keyAlias=upload"
+          } > app/android/key.properties
+      - name: Build
+        working-directory: app
+        env:
+          CAPSA_SERVER: ${{ vars.CAPSA_SERVER }}
+        run: |
+          flutter pub get
+          tool/build.sh apk --release --split-per-abi --dart-define=CAPSA_SERVER="$CAPSA_SERVER"
+          version=$(cat ../VERSION)
+          mkdir -p ../dist
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            cp "build/app/outputs/flutter-apk/app-$abi-release.apk" "../dist/capsa-$version-$abi.apk"
+          done
+      - name: Remove the key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/upload-keystore.jks" app/android/key.properties
+      - uses: actions/upload-artifact@v5
+        with:
+          name: android
+          path: dist/
+
+  ios:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: master
+          flutter-version: ${{ env.FLUTTER_REVISION }}
+          cache: true
+      - run: flutter pub get
+        working-directory: app
+      # Smoke test: the app starts in the iPhone simulator and keeps running.
+      - name: Run in the simulator
+        working-directory: app
+        run: |
+          tool/build.sh ios --simulator --debug
+          udid=$(xcrun simctl list devices available -j |
+            jq -r '[.devices[][] | select(.name | startswith("iPhone"))][0].udid')
+          xcrun simctl boot "$udid"
+          xcrun simctl bootstatus "$udid" -b
+          xcrun simctl install "$udid" build/ios/iphonesimulator/Runner.app
+          xcrun simctl launch "$udid" io.github.thierryreding.capsa
+          sleep 30
+          mkdir -p ../dist
+          xcrun simctl io "$udid" screenshot ../dist/ios-simulator.png
+          xcrun simctl spawn "$udid" launchctl list | grep -q io.github.thierryreding.capsa ||
+            { echo "::error::The app is not running in the simulator"; exit 1; }
+      # Unsigned: install with a tool that signs it with your Apple ID
+      # (AltStore, Sideloadly), or sign it with a developer certificate.
+      - name: Build the unsigned app
+        working-directory: app
+        env:
+          CAPSA_SERVER: ${{ vars.CAPSA_SERVER }}
+        run: |
+          tool/build.sh ios --release --no-codesign --dart-define=CAPSA_SERVER="$CAPSA_SERVER"
+          mkdir -p Payload
+          cp -R build/ios/iphoneos/Runner.app Payload/
+          zip -qr "../dist/capsa-$(cat ../VERSION)-unsigned.ipa" Payload
+      - uses: actions/upload-artifact@v5
+        with:
+          name: ios
+          path: dist/
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [checks, android, ios]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - name: The tag matches VERSION
+        run: test "${GITHUB_REF_NAME#v}" = "$(cat VERSION)"
+      - uses: actions/download-artifact@v6
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --title "Capsa ${GITHUB_REF_NAME#v}" \
+            --generate-notes dist/*.apk dist/*.ipa
