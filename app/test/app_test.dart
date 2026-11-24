@@ -104,6 +104,14 @@ void main() {
       return solution(index.entries[card.entryId]!, card.direction, app.lang);
     }
 
+    // Screen readers hear the field by its own name, not the whole card.
+    final semantics = tester.ensureSemantics();
+    final card = app.session!.current!;
+    final shown = prompt(index.entries[card.entryId]!, card.direction, app.lang);
+    final field = tester.getSemantics(find.bySemanticsLabel(RegExp('Deine Antwort')));
+    expect(field.label, isNot(contains(shown)));
+    semantics.dispose();
+
     await tester.enterText(find.byType(TextField), solutionNow().split(', ').first);
     await tapOn(tester, find.widgetWithText(FilledButton, 'Prüfen'));
     await settle(tester);

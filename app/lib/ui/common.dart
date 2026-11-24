@@ -90,6 +90,9 @@ class CapsaCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Card(
     color: color,
+    // Keep children as separate semantics nodes; by default a Card merges them into
+    // one, so a text field's name became the whole card (prompt, verdict, solution).
+    semanticContainer: false,
     child: Padding(
       padding: const EdgeInsets.all(16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
