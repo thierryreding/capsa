@@ -60,6 +60,17 @@ Future<void> tapOn(WidgetTester tester, Finder finder) async {
   await tester.tap(finder);
 }
 
+/// Choose [option] in the overview's dropdown labelled [label].
+Future<void> pick(WidgetTester tester, String label, String option) async {
+  final menu = find.byWidgetPredicate(
+    (w) => w is DropdownMenu && w.label is Text && (w.label! as Text).data == label,
+  );
+  await tapOn(tester, menu);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text(option).last);
+  await settle(tester);
+}
+
 Future<void> signIn(WidgetTester tester, {String password = 'geheim123'}) async {
   await tester.enterText(find.widgetWithText(TextField, 'Server'), 'capsa.test');
   await tester.enterText(find.widgetWithText(TextField, 'Benutzername'), 'lena');
@@ -186,8 +197,7 @@ void main() {
     final app = await h.launch();
     await start(tester, app);
     await signIn(tester);
-    await tapOn(tester, find.text('Karteikarte'));
-    await settle(tester);
+    await pick(tester, 'Abfrage', 'Karteikarte');
     await tapOn(tester, find.text('Los geht’s (10 Karten)'));
     await settle(tester);
 
@@ -214,8 +224,7 @@ void main() {
     final app = await h.launch();
     await start(tester, app);
     await signIn(tester);
-    await tapOn(tester, find.text('Multiple Choice'));
-    await settle(tester);
+    await pick(tester, 'Abfrage', 'Multiple Choice');
     await tapOn(tester, find.text('Los geht’s (10 Karten)'));
     await settle(tester);
 

@@ -101,9 +101,9 @@ class HomePage extends StatelessWidget {
   }
 }
 
-/// A labelled group of single-choice chips, like the PWA's radio "chips".
-class _ChipGroup<T> extends StatelessWidget {
-  const _ChipGroup({
+/// A labelled single choice as a dropdown, like the profile selector.
+class _Select<T> extends StatelessWidget {
+  const _Select({
     required this.label,
     required this.values,
     required this.selected,
@@ -120,23 +120,18 @@ class _ChipGroup<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(top: 16),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: Theme.of(context).textTheme.titleSmall),
-        const SizedBox(height: 6),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final v in values)
-              ChoiceChip(
-                label: Text(labelOf(v)),
-                selected: v == selected,
-                onSelected: (_) => onSelected(v),
-              ),
-          ],
-        ),
+    // By position, as null is a value here ("mixed" directions) and not "no selection".
+    child: DropdownMenu<int>(
+      // The menu reads initialSelection once; a new key follows synced changes.
+      key: ValueKey(selected),
+      label: Text(label),
+      initialSelection: values.indexOf(selected),
+      expandedInsets: EdgeInsets.zero,
+      onSelected: (i) {
+        if (i != null) onSelected(values[i]);
+      },
+      dropdownMenuEntries: [
+        for (final (i, v) in values.indexed) DropdownMenuEntry(value: i, label: labelOf(v)),
       ],
     ),
   );
@@ -221,14 +216,14 @@ class _Choices extends StatelessWidget {
             title: Text('${unit.number}. ${unit.title}'),
             subtitle: UnitProgress(progress[unit.id]),
           ),
-        _ChipGroup(
+        _Select(
           label: t('home.mode'),
           values: _modes,
           selected: app.prefs.mode,
           labelOf: (m) => t('home.mode.${m.name}'),
           onSelected: (mode) => app.setPrefs(app.prefs.copyWith(mode: mode)),
         ),
-        _ChipGroup<Direction?>(
+        _Select<Direction?>(
           label: t('home.direction'),
           values: _directions,
           selected: app.prefs.direction,
@@ -238,14 +233,14 @@ class _Choices extends StatelessWidget {
           onSelected: (d) => app.setPrefs(app.prefs.copyWith(direction: d)),
         ),
         if (doc.profile.translationLangs.length > 1)
-          _ChipGroup(
+          _Select(
             label: t('home.language'),
             values: doc.profile.translationLangs,
             selected: app.lang,
             labelOf: langName,
             onSelected: (lang) => app.setPrefs(app.prefs.copyWith(lang: lang)),
           ),
-        _ChipGroup(
+        _Select(
           label: t('home.selection'),
           values: _selections,
           selected: app.prefs.selection,
