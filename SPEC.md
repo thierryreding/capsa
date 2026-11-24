@@ -2,7 +2,7 @@
 
 Capsa is the project name (Latin for a container for scrolls, fitting for a Leitner box). CLI name: `capsa`, repository: `capsa`.
 
-Status: M0 to M5 done. This document is meant as the working basis for Claude Code.
+Status: M0 to M6 done. This document is meant as the working basis for Claude Code.
 Attached: `profiles/private/latein-lehrbuch.yaml` (first profile: Latin, "Salve" + units 1-4, 139 entries).
 
 ## 1. Goal
@@ -14,7 +14,7 @@ Languages and textbooks are modelled as interchangeable **profiles**; nothing is
 ### Non-goals (v1)
 - No public operation, no self-registration.
 - No speech recognition, no OCR (profiles are created by hand or via import).
-- No native app. The web app is installed as a PWA.
+- No app store distribution (v1). The web app is installed as a PWA; the Android app (see 3) is installed from an APK.
 - No multi-tenancy. Nothing should be built that rules it out later, though (see 11).
 
 ## 2. Requirements
@@ -51,10 +51,11 @@ Languages and textbooks are modelled as interchangeable **profiles**; nothing is
 ```
 
 - **API:** serves profiles (read-only), manages accounts and accepts learning events. The contract is an OpenAPI schema from which the TypeScript client is generated.
+- **Second client (M6):** a Flutter app in `app/` with the same screens, texts and synced data as the PWA, built for Android (and later iOS). It is a native client of the same API: it keeps its data in a local database (sembast), asks for the server address at sign-in, and stores the session cookie itself, sending it as a `Cookie` header. PWA and app can be used side by side on one account. Its web build works, but has no offline support and is many times larger than the PWA, so the PWA stays the web client.
 - **Frontend:** PWA, offline-first. The source of truth for progress is local; the server is the sync target and backup.
 - **Stack:** frontend **Svelte** (decided) with TypeScript and Vite as a single-page app, Dexie (IndexedDB), vite-plugin-pwa (Workbox). SvelteKit only with `adapter-static`, no server-side rendering, so the app stays fully offline-first. Backend suggestion: Python 3.12 + FastAPI + Pydantic + SQLite (WAL). A move to PostgreSQL is planned at some point (see 13), so database access stays behind a small storage layer with portable SQL and migrations, and nothing relies on SQLite-only features. Tests: pytest, Vitest, Playwright for the offline path.
-- **Target platforms:** iOS (Safari, as a home-screen app) and Android (Chrome). Both are equally important and covered by tests.
-- **Why PWA instead of Flutter:** no app store or TestFlight distribution, one codebase for all devices. The API is shaped so that a native client remains possible later.
+- **Target platforms:** iOS (Safari, as a home-screen app) and Android (Chrome, or the Android app). All are equally important and covered by tests.
+- **Why the PWA stays:** no app store or TestFlight distribution, one codebase for all devices, a small offline-capable web build. The Android app is the more robust choice on Android (offline by nature, no install hint, no browser storage eviction); the price is the learning logic in two languages, held together by the shared vectors.
 
 ## 4. Profile format
 
@@ -162,6 +163,7 @@ These rules must be secured with **tests drawn from the real profile** (table ca
   - Android/Chrome: request `navigator.storage.persist()` so the browser does not evict the data. On iOS, home-screen mode is what matters.
   - Install help in the app: on iOS instructions for "Share → Add to Home Screen", on Android the install prompt (`beforeinstallprompt`).
   - Test matrix: iOS Safari (installed, airplane mode), Android Chrome (installed, airplane mode), desktop Chrome/Firefox for development.
+- **Android app:** `app/tool/build.sh apk --release` builds it with the version from `VERSION` (and optionally `--dart-define=CAPSA_SERVER=https://…` to prefill the server). Release builds are signed with our own upload key, kept outside the repository; updates must be signed with the same key. Release builds only talk HTTPS.
 
 ## 10. Legal and licensing
 
@@ -189,6 +191,7 @@ Use in a school requires clarification with the publishers (licence for the cont
 4. **M3 Sync:** event upload and download, settings, tests with two simulated devices.
 5. **M4 Offline and deployment:** service worker, installability, Docker Compose, HTTPS, iOS hint, backup.
 6. **M5 Comfort** (done): parent mode ('Abfragen lassen': the parent sees the solution at once and judges the spoken answer), multiple choice (options from the same word class and nearby units, never a second right answer; a right choice counts like any answer), test-date planning (secure = box 3 or higher, i.e. two right answers in a row; today's goal spreads the remaining right answers over the days before the test; the plan is the synced setting test.<profile>), statistics per unit (14-day history, per unit box distribution, secure cards and recent accuracy, hardest words; computed on the device for the learner and by the server for parents, both pinned by vectors/stats.json; colours colour-blind safe), user profile with a display name that the app greets with (done: a synced setting, set by the user, changeable by admins), admin page in the web app (done: create accounts, release profiles, set display names, reset passwords, disable accounts from a phone or browser, using the `/admin/users` API; the CLI stays for bootstrapping the first admin).
+7. **M6 Android app** (done): Flutter client in `app/` with feature parity to the PWA (all quiz modes, test planning, statistics, admin page), the learning logic ported to Dart and pinned by the same vectors, widget tests against a fake server, the PWA's icon.
 
 ## 13. Open points
 
@@ -199,12 +202,13 @@ Use in a school requires clarification with the publishers (licence for the cont
 - Whether "name all meanings" should become an option.
 - UI language: German first, with all strings kept i18n-ready (assumption, to be confirmed).
 - Event growth and snapshots. Measured: about 300 bytes per event in SQLite and 330 bytes as JSON in a sync download; a diligent learner produces about 18,000 events (5-6 MB) a year. Not a concern for a family. When an account passes about 100,000 events, or before any use by schools, add learning-state snapshots: the server keeps the per-card state as of a cutoff date (with a grace period of e.g. 90 days for late offline answers, which are otherwise applied on top of the snapshot), new devices download snapshot plus newer events, and old events can be archived (daily aggregates are enough for charts); then `VACUUM` the SQLite file. `capsa stats` reports accounts over the threshold.
+- Distribution of the Android app beyond our own devices (Play Store or F-Droid) and an iOS build (needs a Mac and an Apple developer account): not planned yet.
 - Move from SQLite to PostgreSQL at some point (e.g. before any opening for schools, see 11). When: to be decided; until then keep the storage layer portable (see 3).
 
 ## 14. Notes for Claude Code
 
 - Implement M0 first, with tests as the foundation. Answer checking is pure logic and easy to test.
-- Repository layout (decided): `schemas/` (JSON Schema), `api/` (Python: FastAPI server, `capsa` CLI, profile validation), `web/` (Svelte PWA), `vectors/` (shared JSON test vectors), `profiles/demo/` (own demo profile).
+- Repository layout (decided): `schemas/` (JSON Schema), `api/` (Python: FastAPI server, `capsa` CLI, profile validation), `web/` (Svelte PWA), `app/` (Flutter app), `vectors/` (shared JSON test vectors), `profiles/demo/` (own demo profile).
 - The API is storage and sync: accounts, profiles, events, settings. It does not check answers.
-- Answer matching and Leitner logic live in TypeScript under `web/src/lib/learning/`, pure and free of I/O. If the server ever needs the Leitner state (e.g. statistics for parents), a Python port must pass the same `vectors/*.json`.
+- Answer matching and Leitner logic live in TypeScript under `web/src/lib/learning/`, pure and free of I/O. The Flutter app has a Dart port under `app/lib/learning/`, and the server a Python port for parents' statistics; all three must pass the same `vectors/*.json`, so a change to the logic is made in all of them.
 - No book content in commits, logs or test data.
