@@ -5,6 +5,7 @@ import 'package:capsa/app_state.dart';
 import 'package:capsa/learning/cards.dart';
 import 'package:capsa/main.dart';
 import 'package:capsa/store/db.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:material_ui/material_ui.dart';
@@ -190,9 +191,23 @@ void main() {
     await tapOn(tester, find.text('Los geht’s (10 Karten)'));
     await settle(tester);
 
+    // Number keys pick an option wherever the focus is (as in the PWA).
     final card = app.session!.current!;
     final right = solution(app.index!.entries[card.entryId]!, card.direction, app.lang);
-    await tapOn(tester, find.text(right));
+    final options = tester
+        .widgetList<Text>(
+          find.descendant(of: find.byType(OutlinedButton), matching: find.byType(Text)),
+        )
+        .map((t) => t.data)
+        .where((t) => t != null && int.tryParse(t) == null)
+        .toList();
+    final key = [
+      LogicalKeyboardKey.digit1,
+      LogicalKeyboardKey.digit2,
+      LogicalKeyboardKey.digit3,
+      LogicalKeyboardKey.digit4,
+    ][options.indexOf(right)];
+    await tester.sendKeyEvent(key);
     await settle(tester);
     expect(find.text('Richtig!'), findsOneWidget);
     expect(find.byIcon(Icons.check), findsOneWidget);

@@ -24,7 +24,7 @@ class _QuizPageState extends State<QuizPage> {
   final _typed = TextEditingController();
   final _inputFocus = FocusNode();
   final _nextFocus = FocusNode();
-  final _keys = FocusNode();
+  bool _infoOpen = false;
 
   Verdict? _verdict;
   bool _revealed = false;
@@ -38,6 +38,8 @@ class _QuizPageState extends State<QuizPage> {
   @override
   void initState() {
     super.initState();
+    // Like the PWA's window keydown listener: works wherever the focus is.
+    HardwareKeyboard.instance.addHandler(_onKey);
     _resetCard();
   }
 
@@ -46,7 +48,7 @@ class _QuizPageState extends State<QuizPage> {
     _typed.dispose();
     _inputFocus.dispose();
     _nextFocus.dispose();
-    _keys.dispose();
+    HardwareKeyboard.instance.removeHandler(_onKey);
     super.dispose();
   }
 
@@ -65,10 +67,11 @@ class _QuizPageState extends State<QuizPage> {
     _options = app.prefs.mode == Mode.choice && index != null && card != null
         ? choicesFor(index, card.entryId, card.direction, app.lang)
         : [];
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      (app.prefs.mode == Mode.typed ? _inputFocus : _keys).requestFocus();
-    });
+    if (app.prefs.mode == Mode.typed) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _inputFocus.requestFocus();
+      });
+    }
   }
 
   void _focusNext() => WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -115,14 +118,14 @@ class _QuizPageState extends State<QuizPage> {
   }
 
   /// Number keys 1-4 pick an option (hardware keyboards, the web).
-  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
-    if (event is! KeyDownEvent || app.prefs.mode != Mode.choice || _chosen != null) {
-      return KeyEventResult.ignored;
+  bool _onKey(KeyEvent event) {
+    if (event is! KeyDownEvent || app.prefs.mode != Mode.choice || _chosen != null || _infoOpen) {
+      return false;
     }
     final n = int.tryParse(event.character ?? '');
-    if (n == null || n < 1 || n > _options.length) return KeyEventResult.ignored;
+    if (n == null || n < 1 || n > _options.length) return false;
     _choose(n - 1);
-    return KeyEventResult.handled;
+    return true;
   }
 
   @override
@@ -292,42 +295,41 @@ class _QuizPageState extends State<QuizPage> {
       ],
     };
 
-    return Focus(
-      focusNode: _keys,
-      onKeyEvent: _onKey,
-      child: CapsaPage(
-        app: app,
-        title: Text(t('quiz.of', {'n': position, 'total': total})),
-        actions: [TextButton(onPressed: app.quitSession, child: Text(t('quiz.quit')))],
-        children: [
-          LinearProgressIndicator(value: session.results.length / total),
-          const SizedBox(height: 12),
-          CapsaCard(
-            children: [
-              word,
-              if (repeated) Hint(t('quiz.again')),
-              if (mode == Mode.parent) Hint(t('quiz.parentHint')),
-              const SizedBox(height: 16),
-              ...answer,
-              if (result != null) ...[const SizedBox(height: 12), result],
-              if (actions.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Wrap(spacing: 8, runSpacing: 8, children: actions),
-              ],
+    return CapsaPage(
+      app: app,
+      title: Text(t('quiz.of', {'n': position, 'total': total})),
+      actions: [TextButton(onPressed: app.quitSession, child: Text(t('quiz.quit')))],
+      children: [
+        LinearProgressIndicator(value: session.results.length / total),
+        const SizedBox(height: 12),
+        CapsaCard(
+          children: [
+            word,
+            if (repeated) Hint(t('quiz.again')),
+            if (mode == Mode.parent) Hint(t('quiz.parentHint')),
+            const SizedBox(height: 16),
+            ...answer,
+            if (result != null) ...[const SizedBox(height: 12), result],
+            if (actions.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Wrap(spacing: 8, runSpacing: 8, children: actions),
             ],
-          ),
-        ],
-      ),
+          ],
+        ),
+      ],
     );
   }
 
-  Future<void> _showInfo(BuildContext context, Entry entry, String sourceLang) =>
-      showModalBottomSheet(
-        context: context,
-        showDragHandle: true,
-        isScrollControlled: true,
-        builder: (context) => InfoSheet(entry: entry, sourceLang: sourceLang),
-      );
+  Future<void> _showInfo(BuildContext context, Entry entry, String sourceLang) async {
+    _infoOpen = true;
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) => InfoSheet(entry: entry, sourceLang: sourceLang),
+    );
+    _infoOpen = false;
+  }
 }
 
 class _OptionButton extends StatelessWidget {
