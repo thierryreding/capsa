@@ -123,7 +123,6 @@ wheels = [
 
 [[package]]
 name = "capsa"
-version = "2026.11.0"
 source = { editable = "api" }
 dependencies = [
     { name = "alembic" },

@@ -22,7 +22,7 @@ spec_rendered() {
 case "${1:-}" in
   up)
     podman build -f "$repo/api/Containerfile" -t "$image" "$repo"
-    podman build -f "$repo/web/Containerfile" -t "$web_image" "$repo/web"
+    podman build -f "$repo/web/Containerfile" -t "$web_image" "$repo"
     spec_rendered | podman kube play --replace -
     echo "Waiting for http://capsa.localhost:8080/api/v1/health ..."
     for _ in $(seq 1 30); do

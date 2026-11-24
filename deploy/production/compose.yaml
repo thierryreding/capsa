@@ -38,8 +38,8 @@ services:
   web:
     image: localhost/capsa-web:${CAPSA_VERSION:-latest}
     build:
-      context: ../../web
-      dockerfile: Containerfile
+      context: ../..
+      dockerfile: web/Containerfile
     container_name: ${CAPSA_INSTANCE:-capsa}-web
     restart: unless-stopped
     networks: [proxy]

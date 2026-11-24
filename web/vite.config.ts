@@ -1,14 +1,17 @@
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
-import pkg from './package.json' with { type: 'json' };
+import { readFileSync } from 'node:fs';
 
 // During development the API runs in the local pod (deploy/local/pod.sh up);
 // /api is proxied so that app and API share one origin, as in production.
 const api = process.env.CAPSA_API ?? 'http://capsa.localhost:8080';
 
+// The single source of the version is VERSION at the repository root (SPEC 9).
+const version = readFileSync(new URL('../VERSION', import.meta.url), 'utf8').trim();
+
 export default defineConfig({
-  define: { __APP_VERSION__: JSON.stringify(pkg.version) },
+  define: { __APP_VERSION__: JSON.stringify(version) },
   plugins: [
     svelte(),
     VitePWA({

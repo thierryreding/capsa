@@ -1,6 +1,5 @@
 {
   "name": "capsa-web",
-  "version": "2026.11.0",
   "private": true,
   "license": "AGPL-3.0-or-later",
   "type": "module",
