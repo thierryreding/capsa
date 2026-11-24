@@ -3,7 +3,7 @@ import { currentEntry, login, newLearner, next } from './helpers';
 
 test('multiple choice: tap or press a number, right and wrong are shown', async ({ page, request }) => {
   await login(page, await newLearner(request));
-  await page.getByText('Multiple Choice').click();
+  await page.getByLabel('Abfrage').selectOption('Multiple Choice');
   await page.getByRole('button', { name: /Los geht’s \(10 Karten\)/ }).click();
 
   const options = page.getByRole('list', { name: 'Antwortmöglichkeiten' }).getByRole('button');

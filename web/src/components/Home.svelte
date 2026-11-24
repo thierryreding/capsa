@@ -103,51 +103,48 @@
       {/each}
     </fieldset>
 
-    <fieldset class="options">
-      <legend>{t('home.mode')}</legend>
-      {#each modes as mode (mode)}
-        <label class="chip">
-          <input type="radio" name="mode" checked={app.prefs.mode === mode}
-            onchange={() => app.setPrefs({ mode })} />
-          {t(`home.mode.${mode}`)}
-        </label>
-      {/each}
-    </fieldset>
+    <label>
+      {t('home.mode')}
+      <select value={app.prefs.mode}
+        onchange={(e) => app.setPrefs({ mode: e.currentTarget.value as QuizMode })}>
+        {#each modes as mode (mode)}
+          <option value={mode}>{t(`home.mode.${mode}`)}</option>
+        {/each}
+      </select>
+    </label>
 
-    <fieldset class="options">
-      <legend>{t('home.direction')}</legend>
-      {#each directions as direction (direction)}
-        <label class="chip">
-          <input type="radio" name="direction" checked={app.prefs.direction === direction}
-            onchange={() => app.setPrefs({ direction })} />
-          {direction === 'mixed' ? t('home.direction.mixed') : t(`direction.${direction}`, { src, tr })}
-        </label>
-      {/each}
-    </fieldset>
+    <label>
+      {t('home.direction')}
+      <select value={app.prefs.direction}
+        onchange={(e) => app.setPrefs({ direction: e.currentTarget.value as DirectionChoice })}>
+        {#each directions as direction (direction)}
+          <option value={direction}>
+            {direction === 'mixed' ? t('home.direction.mixed') : t(`direction.${direction}`, { src, tr })}
+          </option>
+        {/each}
+      </select>
+    </label>
 
     {#if doc.profile.translation_langs.length > 1}
-      <fieldset class="options">
-        <legend>{t('home.language')}</legend>
-        {#each doc.profile.translation_langs as lang (lang)}
-          <label class="chip">
-            <input type="radio" name="lang" checked={app.lang === lang}
-              onchange={() => app.setPrefs({ lang })} />
-            {langName(lang)}
-          </label>
-        {/each}
-      </fieldset>
+      <label>
+        {t('home.language')}
+        <select value={app.lang} onchange={(e) => app.setPrefs({ lang: e.currentTarget.value })}>
+          {#each doc.profile.translation_langs as lang (lang)}
+            <option value={lang}>{langName(lang)}</option>
+          {/each}
+        </select>
+      </label>
     {/if}
 
-    <fieldset class="options">
-      <legend>{t('home.selection')}</legend>
-      {#each selections as selection (selection)}
-        <label class="chip">
-          <input type="radio" name="selection" checked={app.prefs.selection === selection}
-            onchange={() => app.setPrefs({ selection })} />
-          {t(`home.selection.${selection}`)}
-        </label>
-      {/each}
-    </fieldset>
+    <label>
+      {t('home.selection')}
+      <select value={app.prefs.selection}
+        onchange={(e) => app.setPrefs({ selection: e.currentTarget.value as Exclude<Selection, 'test'> })}>
+        {#each selections as selection (selection)}
+          <option value={selection}>{t(`home.selection.${selection}`)}</option>
+        {/each}
+      </select>
+    </label>
 
     <button class="link stats-link" onclick={() => app.openStats()}>{t('stats.link')}</button>
 

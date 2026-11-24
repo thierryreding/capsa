@@ -33,7 +33,7 @@ test('two devices share progress and settings through the server', async ({ brow
   await expect(syncStatus(phone)).not.toContainText('noch nicht übertragen');
 
   // Phone: choose flashcards; the choice is a synced setting.
-  await phone.getByText('Karteikarte').click();
+  await phone.getByLabel('Abfrage').selectOption('Karteikarte');
 
   // Tablet: signs in and sees the phone's progress.
   await login(tablet, kid);
@@ -44,7 +44,7 @@ test('two devices share progress and settings through the server', async ({ brow
   await expect(async () => {
     await backToForeground(phone);
     await backToForeground(tablet);
-    await expect(tablet.getByRole('radio', { name: 'Karteikarte' })).toBeChecked({ timeout: 1000 });
+    await expect(tablet.getByLabel('Abfrage')).toHaveValue('flashcard', { timeout: 1000 });
   }).toPass({ timeout: 15_000 });
 });
 

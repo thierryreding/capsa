@@ -3,7 +3,7 @@ import { currentEntry, login, newLearner, next } from './helpers';
 
 test('parent mode: the solution is shown at once, the parent judges', async ({ page, request }) => {
   await login(page, await newLearner(request));
-  await page.getByText('Abfragen lassen').click();
+  await page.getByLabel('Abfrage').selectOption('Abfragen lassen');
   await page.getByRole('button', { name: /Los geht’s \(10 Karten\)/ }).click();
 
   await expect(page.getByText(/Die Lösung siehst nur du/)).toBeVisible();
